@@ -5,7 +5,6 @@ import {
   TestStatus, RunStatus
 } from 'stryker-api/test_runner';
 import { EventEmitter } from 'events';
-import { FileKind } from 'stryker-api/core';
 
 class MyTestRunner extends EventEmitter implements TestRunner {
 
@@ -32,9 +31,6 @@ class MyTestRunner extends EventEmitter implements TestRunner {
 }
 
 let runnerOptions: RunnerOptions = {
-  files: [
-    { name: 'some', mutated: true, included: false, transpiled: true, kind: FileKind.Text },
-    { name: 'files', mutated: false, included: true, transpiled: false, kind: FileKind.Text }],
   port: 1,
   strykerOptions: null
 };

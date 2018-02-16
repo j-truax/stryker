@@ -1,6 +1,6 @@
 import { Config } from 'stryker-api/config';
 import { Transpiler, TranspileResult, TranspilerFactory, TranspilerOptions } from 'stryker-api/transpile';
-import { TextFile, File, FileKind } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 
 class MyTranspiler implements Transpiler {
 
@@ -8,7 +8,7 @@ class MyTranspiler implements Transpiler {
 
   transpile(files: File[]): Promise<TranspileResult> {
     return Promise.resolve({
-      outputFiles: [{ name: 'foo', content: 'bar', kind: FileKind.Text, mutated: this.transpilerOptions.produceSourceMaps, included: false, transpiled: true } as File],
+      outputFiles: [new File('foo/bar.js', Buffer.from('bar.js'))],
       error: null
     });
   }
@@ -17,6 +17,6 @@ class MyTranspiler implements Transpiler {
 TranspilerFactory.instance().register('my-transpiler', MyTranspiler);
 const transpiler = TranspilerFactory.instance().create('my-transpiler', { produceSourceMaps: true, config: new Config() });
 
-transpiler.transpile([{ kind: FileKind.Text, content: '', name: '', mutated: true, included: false, transpiled: true }]).then((transpileResult) => {
+transpiler.transpile([new File('foo/bar.ts', Buffer.from('foobar'))]).then((transpileResult) => {
   console.log(JSON.stringify(transpileResult));
 });
