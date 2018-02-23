@@ -1,11 +1,11 @@
 import { Config, ConfigEditorFactory } from 'stryker-api/config';
-import { StrykerOptions, File } from 'stryker-api/core';
+import { StrykerOptions } from 'stryker-api/core';
 import { MutantResult } from 'stryker-api/report';
 import { TestFramework } from 'stryker-api/test_framework';
 import ReporterOrchestrator from './ReporterOrchestrator';
 import TestFrameworkOrchestrator from './TestFrameworkOrchestrator';
 import MutantTestMatcher from './MutantTestMatcher';
-import InputFileResolver from './InputFileResolver';
+import InputFileResolver from './input/InputFileResolver';
 import ConfigReader from './ConfigReader';
 import PluginLoader from './PluginLoader';
 import ScoreResultCalculator from './ScoreResultCalculator';
@@ -19,6 +19,7 @@ import MutatorFacade from './MutatorFacade';
 import InitialTestExecutor, { InitialTestRunResult } from './process/InitialTestExecutor';
 import MutationTestExecutor from './process/MutationTestExecutor';
 import SourceMapper from './transpiler/SourceMapper';
+import InputFileCollection from './input/InputFileCollection';
 
 export default class Stryker {
 
@@ -66,9 +67,9 @@ export default class Stryker {
     }
   }
 
-  private mutate(inputFiles: File[], initialTestRunResult: InitialTestRunResult) {
+  private mutate(input: InputFileCollection, initialTestRunResult: InitialTestRunResult) {
     const mutator = new MutatorFacade(this.config);
-    const mutants = mutator.mutate(inputFiles);
+    const mutants = mutator.mutate(input.filesToMutate);
     if (mutants.length) {
       this.log.info(`${mutants.length} Mutant(s) generated`);
     } else {
@@ -76,7 +77,7 @@ export default class Stryker {
     }
     const mutantRunResultMatcher = new MutantTestMatcher(
       mutants,
-      inputFiles,
+      input.filesToMutate,
       initialTestRunResult.runResult,
       SourceMapper.create(initialTestRunResult.transpiledFiles, this.config),
       initialTestRunResult.coverageMaps,
@@ -121,11 +122,11 @@ export default class Stryker {
     log4js.setGlobalLogLevel(this.config.logLevel);
   }
 
-  private createMutationTester(inputFiles: File[]) {
-    return new MutationTestExecutor(this.config, inputFiles, this.testFramework, this.reporter);
+  private createMutationTester(inputFiles: InputFileCollection) {
+    return new MutationTestExecutor(this.config, inputFiles.files, this.testFramework, this.reporter);
   }
 
-  private createInitialTestRunProcess(inputFiles: File[]) {
+  private createInitialTestRunProcess(inputFiles: InputFileCollection) {
     return new InitialTestExecutor(this.config, inputFiles, this.testFramework, this.timer);
   }
 

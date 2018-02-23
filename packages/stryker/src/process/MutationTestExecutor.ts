@@ -13,7 +13,7 @@ import SandboxPool from '../SandboxPool';
 
 export default class MutationTestExecutor {
 
-  constructor(private config: Config, private inputFiles: File[], private testFramework: TestFramework | null, private reporter: StrictReporter) {
+  constructor(private config: Config, private inputFiles: ReadonlyArray<File>, private testFramework: TestFramework | null, private reporter: StrictReporter) {
   }
 
   async run(allMutants: TestableMutant[]): Promise<MutantResult[]> {

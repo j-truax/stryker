@@ -1,6 +1,6 @@
 import TestableMutant from './TestableMutant';
 import { TranspileResult } from 'stryker-api/transpile';
-import { File, TextFile } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 
 export default class TranspiledMutant {
 
@@ -12,7 +12,7 @@ export default class TranspiledMutant {
    */
   constructor(public mutant: TestableMutant, public transpileResult: TranspileResult, public changedAnyTranspiledFiles: boolean) { }
 
-  static create(mutant: TestableMutant, transpileResult: TranspileResult, unMutatedFiles: File[]) {
+  static create(mutant: TestableMutant, transpileResult: TranspileResult, unMutatedFiles: ReadonlyArray<File>) {
     return new TranspiledMutant(mutant, transpileResult, someFilesChanged());
 
     function someFilesChanged(): boolean {
@@ -22,7 +22,7 @@ export default class TranspiledMutant {
     function fileChanged(file: File) {
       if (unMutatedFiles) {
         const unMutatedFile = unMutatedFiles.find(f => f.name === file.name);
-        return !unMutatedFile || (unMutatedFile as TextFile).content !== (file as TextFile).content;
+        return !unMutatedFile || unMutatedFile.textContent !== file.textContent;
       } else {
         return true;
       }

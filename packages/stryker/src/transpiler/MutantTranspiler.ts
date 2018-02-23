@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 import { Config } from 'stryker-api/config';
 import TranspilerFacade from './TranspilerFacade';
 import TestableMutant from '../TestableMutant';
-import { File, TextFile, FileKind } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import SourceFile from '../SourceFile';
 import ChildProcessProxy, { ChildProxy } from '../child-proxy/ChildProcessProxy';
 import { TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
@@ -13,7 +13,7 @@ export default class MutantTranspiler {
   private transpilerChildProcess: ChildProcessProxy<TranspilerFacade> | undefined;
   private proxy: ChildProxy<TranspilerFacade>;
   private currentMutatedFile: SourceFile;
-  private unMutatedFiles: File[];
+  private unMutatedFiles: ReadonlyArray<File>;
 
   /**
    * Creates the mutant transpiler in a child process if one is defined. 
@@ -36,7 +36,7 @@ export default class MutantTranspiler {
     }
   }
 
-  initialize(files: File[]): Promise<TranspileResult> {
+  initialize(files: ReadonlyArray<File>): Promise<TranspileResult> {
     return this.proxy.transpile(files).then((transpileResult: TranspileResult) => {
       this.unMutatedFiles = transpileResult.outputFiles;
       return transpileResult;
@@ -68,19 +68,12 @@ export default class MutantTranspiler {
   }
 
   private transpileMutant(mutant: TestableMutant): Promise<TranspileResult> {
-    const filesToTranspile: TextFile[] = [];
-    if (this.currentMutatedFile && this.currentMutatedFile.file.name !== mutant.fileName) {
+    const filesToTranspile: File[] = [];
+    if (this.currentMutatedFile && this.currentMutatedFile.name !== mutant.fileName) {
       filesToTranspile.push(this.currentMutatedFile.file);
     }
     this.currentMutatedFile = mutant.sourceFile;
-    const mutatedFile: TextFile = {
-      name: mutant.fileName,
-      content: mutant.mutatedCode,
-      kind: FileKind.Text,
-      mutated: this.currentMutatedFile.file.mutated,
-      transpiled: this.currentMutatedFile.file.transpiled,
-      included: mutant.included
-    };
+    const mutatedFile = new File(mutant.fileName, Buffer.from(mutant.mutatedCode));
     filesToTranspile.push(mutatedFile);
     return this.proxy.transpile(filesToTranspile);
   }

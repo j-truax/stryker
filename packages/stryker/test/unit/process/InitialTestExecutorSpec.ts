@@ -14,6 +14,7 @@ import { RunStatus, RunResult, TestStatus } from 'stryker-api/test_runner';
 import currentLogMock from '../../helpers/log4jsMock';
 import Timer from '../../../src/utils/Timer';
 import { Mock, coverageMaps } from '../../helpers/producers';
+import InputFileCollection from '../../../src/input/InputFileCollection';
 
 describe('InitialTestExecutor run', () => {
 
@@ -39,8 +40,8 @@ describe('InitialTestExecutor run', () => {
     testFrameworkMock = producers.testFramework();
     transpileResultMock = producers.transpileResult({
       outputFiles: [
-        producers.textFile({ name: 'transpiled-file-1.js' }),
-        producers.textFile({ name: 'transpiled-file-2.js' })
+        new File('transpiled-file-1.js', ''),
+        new File('transpiled-file-2.js', '')
       ]
     });
     transpilerFacadeMock.transpile.returns(transpileResultMock);
@@ -52,7 +53,7 @@ describe('InitialTestExecutor run', () => {
 
   describe('without input files', () => {
     it('should log a warning and cancel the test run', async () => {
-      sut = new InitialTestExecutor(options, [], testFrameworkMock, timer as any);
+      sut = new InitialTestExecutor(options, new InputFileCollection([], []), testFrameworkMock, timer as any);
       const result = await sut.run();
       expect(result.runResult.status).to.be.eq(RunStatus.Complete);
       expect(log.info).to.have.been.calledWith('No files have been found. Aborting initial test run.');
@@ -61,10 +62,10 @@ describe('InitialTestExecutor run', () => {
 
   describe('with input files', () => {
 
-    let files: File[];
+    let files: InputFileCollection;
 
     beforeEach(() => {
-      files = [producers.textFile({ name: '', mutated: true, included: true, content: '' })];
+      files = new InputFileCollection([new File('mutate.js', '')], ['mutate.js']);
       sut = new InitialTestExecutor(options, files, testFrameworkMock, timer as any);
     });
 
@@ -76,7 +77,7 @@ describe('InitialTestExecutor run', () => {
     it('should create the transpiler with produceSourceMaps = true when coverage analysis is enabled', async () => {
       options.coverageAnalysis = 'all';
       await sut.run();
-      const expectedTranspilerOptions: TranspilerOptions = { 
+      const expectedTranspilerOptions: TranspilerOptions = {
         produceSourceMaps: true,
         config: options
       };
@@ -87,7 +88,7 @@ describe('InitialTestExecutor run', () => {
     it('should create the transpiler with produceSourceMaps = false when coverage analysis is "off"', async () => {
       options.coverageAnalysis = 'off';
       await sut.run();
-      const expectedTranspilerOptions: TranspilerOptions = { 
+      const expectedTranspilerOptions: TranspilerOptions = {
         produceSourceMaps: false,
         config: options
       };
@@ -120,9 +121,8 @@ describe('InitialTestExecutor run', () => {
       await sut.run();
       expect(log.debug).calledOnce;
       const actualLogMessage: string = log.debug.getCall(0).args[0];
-      expect(actualLogMessage).contains('Transpiled files in order');
-      expect(actualLogMessage).contains('transpiled-file-1.js (included: true)');
-      expect(actualLogMessage).contains('transpiled-file-2.js (included: true)');
+      const expectedLogMessage = `Transpiled files: ${JSON.stringify(['transpiled-file-1.js', 'transpiled-file-2.js'], null, 2)}`;
+      expect(actualLogMessage).eq(expectedLogMessage);
     });
 
     it('should not log the transpiled results if transpilers are not specified', async () => {
