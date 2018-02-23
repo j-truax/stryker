@@ -10,10 +10,14 @@ export default class File {
   /**
    * Creates a new File to be used within Stryker.
    * @param name The full name of the file (inc path)
-   * @param content The buffered content of the file
+   * @param content The buffered or string content of the file
    */
-  constructor(public readonly name: string, content: Buffer) {
-    this._content = content;
+  constructor(public readonly name: string, content: Buffer | string) {
+    if (typeof content === 'string') {
+      this.textContent = content;
+    } else {
+      this.content = content;
+    }
   }
 
   /**

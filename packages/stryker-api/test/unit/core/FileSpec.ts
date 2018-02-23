@@ -4,6 +4,16 @@ import { serialize, deserialize } from 'surrial';
 
 describe('File', () => {
 
+  it('should allow utf8 encoded string content in the constructor', () => {
+    const actual = new File('foobar.js', 'string-content');
+    expect(actual.content).deep.eq(Buffer.from('string-content'));
+  });
+
+  it('should allow buffered content in the constructor', () => {
+    const actual = new File('foobar.js', Buffer.from('string-content'));
+    expect(actual.textContent).deep.eq('string-content');
+  });
+
   it('should update textContent if content is changed', () => {
     const file = new File('foobar.js', Buffer.from('test'));
     expect(file.textContent).eq('test');
