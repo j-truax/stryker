@@ -22,7 +22,7 @@ export default class ChildProcessProxyWorker {
   private listenToParent() {
 
     const handler = (serializedMessage: string) => {
-      const message = deserialize(serializedMessage) as WorkerMessage;
+      const message = deserialize<WorkerMessage>(serializedMessage);
       switch (message.kind) {
         case WorkerMessageKind.Init:
           setGlobalLogLevel(message.logLevel);

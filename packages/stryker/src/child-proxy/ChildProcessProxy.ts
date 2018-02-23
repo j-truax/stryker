@@ -44,7 +44,8 @@ export default class ChildProcessProxy<T> {
   }
 
   private send(message: WorkerMessage) {
-    this.worker.send(serialize(message));
+    const messageStr = serialize(message);
+    this.worker.send(messageStr);
   }
 
   private initProxy() {
