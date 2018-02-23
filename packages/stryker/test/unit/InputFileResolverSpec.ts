@@ -1,63 +1,86 @@
-import { resolve } from 'path';
+import * as path from 'path';
 import { expect } from 'chai';
+import * as fs from 'mz/fs';
+import * as childProcess from 'mz/child_process';
 import { Logger } from 'log4js';
+import { File } from 'stryker-api/core';
 import { SourceFile } from 'stryker-api/report';
 import InputFileResolver from '../../src/InputFileResolver';
 import * as sinon from 'sinon';
 import * as fileUtils from '../../src/utils/fileUtils';
-import * as path from 'path';
-import * as fs from 'mz/fs';
-import { FileDescriptor, TextFile } from 'stryker-api/core';
 import currentLogMock from '../helpers/log4jsMock';
 import BroadcastReporter from '../../src/reporters/BroadcastReporter';
-import { Mock, mock, textFile, binaryFile } from '../helpers/producers';
+import { Mock, mock } from '../helpers/producers';
+import { errorToString } from '../../src/utils/objectUtils';
 
-const files = (...namesWithContent: [string, string][]): TextFile[] =>
-  namesWithContent.map((nameAndContent): TextFile => textFile({
-    mutated: false,
-    transpiled: true,
-    name: path.resolve(nameAndContent[0]),
-    content: nameAndContent[1]
-  }));
+const files = (...namesWithContent: [string, string][]): File[] =>
+  namesWithContent.map((nameAndContent): File => new File(
+    path.resolve(nameAndContent[0]),
+    Buffer.from(nameAndContent[1])
+  ));
 
-describe('InputFileResolver', () => {
+describe.only('InputFileResolver', () => {
   let log: Mock<Logger>;
   let globStub: sinon.SinonStub;
   let sut: InputFileResolver;
   let reporter: Mock<BroadcastReporter>;
+  let childProcessExecStub: sinon.SinonStub;
 
   beforeEach(() => {
     log = currentLogMock();
     reporter = mock(BroadcastReporter);
     globStub = sandbox.stub(fileUtils, 'glob');
     sandbox.stub(fs, 'readFile')
-      .withArgs(sinon.match.string).resolves(new Buffer(0)) // fall back
-      .withArgs(sinon.match.string, 'utf8').resolves('') // fall back
-      .withArgs(sinon.match('file1'), 'utf8').resolves('file 1 content')
-      .withArgs(sinon.match('file2'), 'utf8').resolves('file 2 content')
-      .withArgs(sinon.match('file3'), 'utf8').resolves('file 3 content')
-      .withArgs(sinon.match('mute1'), 'utf8').resolves('mutate 1 content')
-      .withArgs(sinon.match('mute2'), 'utf8').resolves('mutate 2 content');
-    globStub.withArgs('mut*tion*').resolves(['/mute1.js', '/mute2.js']);
-    globStub.withArgs('mutation1').resolves(['/mute1.js']);
-    globStub.withArgs('mutation2').resolves(['/mute2.js']);
+      .withArgs(sinon.match.string).resolves(new Buffer(0)) // fallback
+      .withArgs(sinon.match.string).resolves(new Buffer(0)) // fallback
+      .withArgs(sinon.match('file1')).resolves(Buffer.from('file 1 content'))
+      .withArgs(sinon.match('file2')).resolves(Buffer.from('file 2 content'))
+      .withArgs(sinon.match('file3')).resolves(Buffer.from('file 3 content'))
+      .withArgs(sinon.match('mute1')).resolves(Buffer.from('mutate 1 content'))
+      .withArgs(sinon.match('mute2')).resolves(Buffer.from('mutate 2 content'));
+    globStub.withArgs('mute*').resolves(['/mute1.js', '/mute2.js']);
+    globStub.withArgs('mute1').resolves(['/mute1.js']);
+    globStub.withArgs('mute2').resolves(['/mute2.js']);
     globStub.withArgs('file1').resolves(['/file1.js']);
     globStub.withArgs('file2').resolves(['/file2.js']);
     globStub.withArgs('file3').resolves(['/file3.js']);
     globStub.withArgs('file*').resolves(['/file1.js', '/file2.js', '/file3.js']);
     globStub.resolves([]); // default
+    childProcessExecStub = sandbox.stub(childProcess, 'exec');
   });
 
-  describe('with mutant file expressions which result in files which are included in result of all globbing files', () => {
-    beforeEach(() => {
-      sut = new InputFileResolver(['mut*tion*'], ['file1', 'mutation1', 'file2', 'mutation2', 'file3'], reporter);
-    });
+  it('should use git to identify files if files array is missing', async () => {
+    sut = new InputFileResolver([], undefined, reporter);
+    childProcessExecStub.resolves([Buffer.from(`
+    file1.js
+    foo/bar/baz.ts
+    `)]);
+    const result = await sut.resolve();
+    expect(childProcessExecStub).calledWith('git ls-files --others --exclude-standard --cached',
+      { maxBuffer: 10 * 1000 * 1024 });
+    expect(result.files.map(file => file.name)).deep.eq([path.resolve('file1.js'), path.resolve('foo/bar/baz.ts')]);
+  });
 
-    it('should result in the expected input files', async () => {
-      const results = await sut.resolve();
-      expect(results.length).to.be.eq(5);
-      expect(results.map(m => m.mutated)).to.deep.equal([false, true, false, true, false]);
-      expect(results.map(m => m.name)).to.deep.equal([
+  it.only('should reject if there is no `files` array and `git ls-files` command fails', () => {
+    const expectedError = new Error('fatal: Not a git repository (or any of the parent directories): .git');
+    childProcessExecStub.rejects(expectedError);
+    return expect(new InputFileResolver([], undefined, reporter).resolve())
+      .rejectedWith(`Cannot determine input files. Either specify a \`files\` array in your stryker configuration, or make sure "${process.cwd()
+      }" is located inside a git repository. Inner error: ${
+        errorToString(expectedError)
+      }`);
+  });
+
+  describe('with mutate file expressions', () => {
+
+    it('should result in the expected mutate files', async () => {
+      sut = new InputFileResolver(['mute*'], ['file1', 'mute1', 'file2', 'mute2', 'file3'], reporter);
+      const result = await sut.resolve();
+      expect(result.mutateFileNames).to.deep.equal([
+        path.resolve('/mute1.js'),
+        path.resolve('/mute2.js')
+      ]);
+      expect(result.files.map(file => file.name)).to.deep.equal([
         path.resolve('/file1.js'),
         path.resolve('/mute1.js'),
         path.resolve('/file2.js'),
@@ -66,61 +89,45 @@ describe('InputFileResolver', () => {
       );
     });
 
+    it('should only report a mutate file when it is included in the resolved files', async () => {
+      sut = new InputFileResolver(['mute*'], ['file1', 'mute1', 'file2', /*'mute2'*/ 'file3'], reporter);
+      const result = await sut.resolve();
+      expect(result.mutateFileNames).to.deep.equal([
+        path.resolve('/mute1.js')
+      ]);
+    });
+
     it('should report OnAllSourceFilesRead', async () => {
+      sut = new InputFileResolver(['mute*'], ['file1', 'mute1', 'file2', 'mute2', 'file3'], reporter);
       await sut.resolve();
       const expected: SourceFile[] = [
-        { content: 'file 1 content', path: path.resolve('/file1.js') },
-        { content: 'mutate 1 content', path: path.resolve('/mute1.js') },
-        { content: 'file 2 content', path: path.resolve('/file2.js') },
-        { content: 'mutate 2 content', path: path.resolve('/mute2.js') },
-        { content: 'file 3 content', path: path.resolve('/file3.js') }
+        { path: path.resolve('/file1.js'), content: 'file 1 content' },
+        { path: path.resolve('/mute1.js'), content: 'mutate 1 content' },
+        { path: path.resolve('/file2.js'), content: 'file 2 content' },
+        { path: path.resolve('/mute2.js'), content: 'mutate 2 content' },
+        { path: path.resolve('/file3.js'), content: 'file 3 content' }
       ];
       expect(reporter.onAllSourceFilesRead).calledWith(expected);
     });
 
     it('should report OnSourceFileRead', async () => {
+      sut = new InputFileResolver(['mute*'], ['file1', 'mute1', 'file2', 'mute2', 'file3'], reporter);
       await sut.resolve();
       const expected: SourceFile[] = [
-        { content: 'file 1 content', path: path.resolve('/file1.js') },
-        { content: 'mutate 1 content', path: path.resolve('/mute1.js') },
-        { content: 'file 2 content', path: path.resolve('/file2.js') },
-        { content: 'mutate 2 content', path: path.resolve('/mute2.js') },
-        { content: 'file 3 content', path: path.resolve('/file3.js') }
+        { path: path.resolve('/file1.js'), content: 'file 1 content' },
+        { path: path.resolve('/mute1.js'), content: 'mutate 1 content' },
+        { path: path.resolve('/file2.js'), content: 'file 2 content' },
+        { path: path.resolve('/mute2.js'), content: 'mutate 2 content' },
+        { path: path.resolve('/file3.js'), content: 'file 3 content' }
       ];
       expected.forEach(sourceFile => expect(reporter.onSourceFileRead).calledWith(sourceFile));
     });
   });
 
-  describe('when supplying an InputFileDescriptor without `pattern` property', () => {
-    it('should result in an error', () => {
-      expect(() => new InputFileResolver([], [<any>{ included: false, mutated: true }], reporter))
-        .throws('File descriptor {"included":false,"mutated":true} is missing mandatory property \'pattern\'.');
-    });
-  });
-
-  describe('without mutate property, but with mutated: true in files', () => {
+  describe('without mutate files', () => {
 
     beforeEach(() => {
-      sut = new InputFileResolver([], ['file1', { pattern: 'mutation1', included: false, mutated: true }], reporter);
-    });
-
-    it('should result in the expected input files', async () => {
-      const results = await sut.resolve();
-      expect(results).to.deep.equal([
-        textFile({ included: true, mutated: false, name: resolve('/file1.js'), content: 'file 1 content' }),
-        textFile({ included: false, mutated: true, name: resolve('/mute1.js'), content: 'mutate 1 content' })]);
-    });
-
-    it('should log that one file is about to be mutated', async () => {
-      await sut.resolve();
-      expect(log.info).to.have.been.calledWith('Found 1 of 2 file(s) to be mutated.');
-    });
-  });
-
-  describe('without mutate property and without mutated: true in files', () => {
-
-    beforeEach(() => {
-      sut = new InputFileResolver([], ['file1', { pattern: 'mutation1', included: false, mutated: false }], reporter);
+      sut = new InputFileResolver([], ['file1', 'mute1'], reporter);
     });
 
     it('should warn about dry-run', async () => {
@@ -137,25 +144,8 @@ describe('InputFileResolver', () => {
     });
 
     it('should retain original glob order', async () => {
-      const results = await sut.resolve();
-      expect(results.map(m => m.name.substr(m.name.length - 5))).to.deep.equal(['file1', 'file2']);
-    });
-  });
-
-  describe('when selecting files to mutate which are not included', () => {
-    let results: FileDescriptor[];
-    let error: any;
-    beforeEach(() => {
-      sut = new InputFileResolver(['mut*tion*'], ['file1'], reporter);
-      return sut.resolve().then(r => results = r, e => error = e);
-    });
-
-    it('should reject the result', () => {
-      expect(results).to.not.be.ok;
-      expect(error.message).to.be.eq([
-        `Could not find mutate file "${path.resolve('/mute1.js')}" in list of files.`,
-        `Could not find mutate file "${path.resolve('/mute2.js')}" in list of files.`
-      ].join(' '));
+      const result = await sut.resolve();
+      expect(result.files.map(m => m.name.substr(m.name.length - 5))).to.deep.equal(['file1', 'file2']);
     });
   });
 
@@ -170,98 +160,55 @@ describe('InputFileResolver', () => {
     });
   });
 
-  describe('when a globbing expression results in a reject', () => {
-    let results: FileDescriptor[];
-    let actualError: any;
-    let expectedError: Error;
-
-    beforeEach(() => {
-      sut = new InputFileResolver(['file1'], ['fileError', 'fileError'], reporter);
-      expectedError = new Error('ERROR: something went wrong');
-      globStub.withArgs('fileError').rejects(expectedError);
-      return sut.resolve().then(r => results = r, e => actualError = e);
-    });
-
-    it('should reject the promise', () => {
-      expect(results).to.not.be.ok;
-      expect(actualError).to.deep.equal(expectedError);
-    });
+  it('should reject when a globbing expression results in a reject', () => {
+    sut = new InputFileResolver(['file1'], ['fileError', 'fileError'], reporter);
+    const expectedError = new Error('ERROR: something went wrong');
+    globStub.withArgs('fileError').rejects(expectedError);
+    return expect(sut.resolve()).rejectedWith(expectedError);
   });
 
   describe('when excluding files with "!"', () => {
 
-    it('should exclude the files that were previously included', () => {
-      return expect(new InputFileResolver([], ['file2', 'file1', '!file2'], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file1.js', 'file 1 content']));
+    it('should exclude the files that were previously included', async () => {
+      const result = await new InputFileResolver([], ['file2', 'file1', '!file2'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file1.js', 'file 1 content']));
     });
 
-    it('should exclude the files that were previously with a wild card', () => {
-      return expect(new InputFileResolver([], ['file*', '!file2'], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file1.js', 'file 1 content'], ['/file3.js', 'file 3 content']));
+    it('should exclude the files that were previously with a wild card', async () => {
+      const result = await new InputFileResolver([], ['file*', '!file2'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file1.js', 'file 1 content'], ['/file3.js', 'file 3 content']));
     });
 
-    it('should not exclude files added using an input file descriptor', () => {
-      return expect(new InputFileResolver([], ['file2', { pattern: '!file2' }], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file2.js', 'file 2 content']));
-    });
-
-    it('should not exclude files when the globbing expression results in an empty array', () => {
-      return expect(new InputFileResolver([], ['file2', '!does/not/exist'], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file2.js', 'file 2 content']));
+    it('should not exclude files when the globbing expression results in an empty array', async () => {
+      const result = await new InputFileResolver([], ['file2', '!does/not/exist'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file2.js', 'file 2 content']));
     });
   });
 
   describe('when provided duplicate files', () => {
 
-    it('should deduplicate files that occur more than once', () => {
-      return expect(new InputFileResolver([], ['file2', 'file2'], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file2.js', 'file 2 content']));
+    it('should deduplicate files that occur more than once', async () => {
+      const result = await new InputFileResolver([], ['file2', 'file2'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file2.js', 'file 2 content']));
     });
 
-    it('should deduplicate files that previously occurred in a wildcard expression', () => {
-      return expect(new InputFileResolver([], ['file*', 'file2'], reporter).resolve())
-        .to.eventually.deep.equal(files(['/file1.js', 'file 1 content'], ['/file2.js', 'file 2 content'], ['/file3.js', 'file 3 content']));
+    it('should deduplicate files that previously occurred in a wildcard expression', async () => {
+      const result = await new InputFileResolver([], ['file*', 'file2'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file1.js', 'file 1 content'], ['/file2.js', 'file 2 content'], ['/file3.js', 'file 3 content']));
     });
 
-    it('should order files by expression order', () => {
-      return expect(new InputFileResolver([], ['file2', 'file*'], reporter).resolve())
-        .eventually.deep.equal(files(['/file2.js', 'file 2 content'], ['/file1.js', 'file 1 content'], ['/file3.js', 'file 3 content']));
-    });
-  });
-
-  describe('with url as file pattern', () => {
-    it('should pass through the web urls without globbing', () => {
-      return new InputFileResolver([], ['http://www', { pattern: 'https://ok' }], reporter)
-        .resolve()
-        .then(() => expect(fileUtils.glob).to.not.have.been.called);
-    });
-
-    it('should fail when web url is in the mutated array', () => {
-      expect(() => new InputFileResolver(['http://www'], ['http://www'], reporter))
-        .throws('Cannot mutate web url "http://www".');
-    });
-
-    it('should fail when web url is to be mutated', () => {
-      expect(() => new InputFileResolver([], [{ pattern: 'http://www', mutated: true }], reporter))
-        .throws('Cannot mutate web url "http://www".');
+    it('should order files by expression order', async () => {
+      const result = await new InputFileResolver([], ['file2', 'file*'], reporter).resolve();
+      assertFilesEqual(result.files, files(['/file2.js', 'file 2 content'], ['/file1.js', 'file 1 content'], ['/file3.js', 'file 3 content']));
     });
   });
 
+  function assertFilesEqual(actual: File[], expected: File[]) {
+    expect(actual).lengthOf(expected.length);
+    for (let index in actual) {
+      expect(actual[index].name).eq(expected[index].name);
+      expect(actual[index].textContent).eq(expected[index].textContent);
+    }
+  }
 
-  it(`should presume that files with an extension like .jpeg or .gif are binary`, async () => {
-    // Arrange
-    const binaryFiles = ['file.png', 'file.jpeg', 'file.jpg', 'file.gif', 'file.zip', 'file.tar'];
-    binaryFiles.forEach(file => globStub.withArgs(file).resolves([file]));
-    sut = new InputFileResolver([], binaryFiles, reporter);
-
-    // Act
-    const actual = await sut.resolve();
-
-    // Assert
-    expect(actual).deep.eq(binaryFiles.map(file => binaryFile({ 
-      name: path.resolve(file), 
-      mutated: false, 
-      transpiled: true 
-    })));
-  });
 });
