@@ -23,7 +23,7 @@ export default interface Transpiler {
    * 
    * @example An example of consecutive transpiler calls:
    * 
-   *      call 1: [foo.es6, bar.es6, fooSpec.es6, barSpec.es6, image.png, http://example.com]
+   *      call 1: [foo.es6, bar.es6, fooSpec.es6, barSpec.es6, image.png]
    *      call 2: [foo.es6 (mutated)]
    *      call 3: [foo.es6 (mutated)]
    *      call 4: [foo.es6, bar.es6 (mutated)]
@@ -31,6 +31,6 @@ export default interface Transpiler {
    * 
    * @returns an error message (if transpiling failed) or the output files to be used in the next transpiler
    */
-  transpile(files: File[]): Promise<TranspileResult>;
+  transpile(files: ReadonlyArray<File>): Promise<TranspileResult>;
 
 }
