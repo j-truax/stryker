@@ -3,21 +3,17 @@ import * as fs from 'mz/fs';
 import { exec } from 'mz/child_process';
 import { getLogger } from 'log4js';
 import { File } from 'stryker-api/core';
-import { glob } from './utils/fileUtils';
-import StrictReporter from './reporters/StrictReporter';
+import { glob } from '../utils/fileUtils';
+import StrictReporter from '../reporters/StrictReporter';
 import { SourceFile } from 'stryker-api/report';
-import StrykerError from './utils/StrykerError';
+import StrykerError from '../utils/StrykerError';
+import InputFileCollection from './InputFileCollection';
 
 function toReportSourceFile(file: File): SourceFile {
   return {
     path: file.name,
     content: file.textContent
   };
-}
-
-export interface InputFileResolverResult {
-  files: File[];
-  mutateFileNames: string[];
 }
 
 export default class InputFileResolver {
@@ -33,16 +29,13 @@ export default class InputFileResolver {
     }
   }
 
-  public async resolve(): Promise<InputFileResolverResult> {
+  public async resolve(): Promise<InputFileCollection> {
     const [inputFileNames, mutateFiles] = await Promise.all([this.resolveInputFiles(), this.mutateResolver.resolve()]);
     const files: File[] = await this.readFiles(inputFileNames);
-    const mutateFileNames = this.filterFilesToMutate(files, mutateFiles);
-    this.logFiles(files, mutateFileNames);
+    const inputFileCollection = new InputFileCollection(files, mutateFiles);
     this.reportAllSourceFilesRead(files);
-    return {
-      files,
-      mutateFileNames
-    };
+    inputFileCollection.logFiles(this.log);
+    return inputFileCollection;
   }
 
   private resolveInputFiles() {
@@ -61,22 +54,6 @@ export default class InputFileResolver {
       .catch(error => {
         throw new StrykerError(`Cannot determine input files. Either specify a \`files\` array in your stryker configuration, or make sure "${process.cwd()}" is located inside a git repository`, error);
       });
-  }
-
-  private filterFilesToMutate(allInputFiles: File[], mutateFiles: string[]) {
-    return mutateFiles.filter(mutateFile => allInputFiles.some(inputFile => inputFile.name === mutateFile));
-  }
-
-  private logFiles(allInputFiles: File[], mutateFiles: string[]) {
-    if (mutateFiles.length) {
-      this.log.info(`Found ${mutateFiles.length} of ${allInputFiles.length} file(s) to be mutated.`);
-    } else {
-      this.log.warn(`No files marked to be mutated, stryker will perform a dry-run without actually mutating anything.`);
-    }
-    if (this.log.isDebugEnabled) {
-      this.log.debug(`All input files: ${JSON.stringify(allInputFiles.map(file => file.name), null, 2)}`);
-      this.log.debug(`Files to mutate: ${JSON.stringify(mutateFiles, null, 2)}`);
-    }
   }
 
   private reportAllSourceFilesRead(allFiles: File[]) {

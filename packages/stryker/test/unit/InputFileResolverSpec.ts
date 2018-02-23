@@ -5,7 +5,7 @@ import * as childProcess from 'mz/child_process';
 import { Logger } from 'log4js';
 import { File } from 'stryker-api/core';
 import { SourceFile } from 'stryker-api/report';
-import InputFileResolver from '../../src/InputFileResolver';
+import InputFileResolver from '../../src/input/InputFileResolver';
 import * as sinon from 'sinon';
 import * as fileUtils from '../../src/utils/fileUtils';
 import currentLogMock from '../helpers/log4jsMock';
@@ -19,7 +19,7 @@ const files = (...namesWithContent: [string, string][]): File[] =>
     Buffer.from(nameAndContent[1])
   ));
 
-describe.only('InputFileResolver', () => {
+describe('InputFileResolver', () => {
   let log: Mock<Logger>;
   let globStub: sinon.SinonStub;
   let sut: InputFileResolver;
@@ -61,7 +61,7 @@ describe.only('InputFileResolver', () => {
     expect(result.files.map(file => file.name)).deep.eq([path.resolve('file1.js'), path.resolve('foo/bar/baz.ts')]);
   });
 
-  it.only('should reject if there is no `files` array and `git ls-files` command fails', () => {
+  it('should reject if there is no `files` array and `git ls-files` command fails', () => {
     const expectedError = new Error('fatal: Not a git repository (or any of the parent directories): .git');
     childProcessExecStub.rejects(expectedError);
     return expect(new InputFileResolver([], undefined, reporter).resolve())
@@ -203,7 +203,7 @@ describe.only('InputFileResolver', () => {
     });
   });
 
-  function assertFilesEqual(actual: File[], expected: File[]) {
+  function assertFilesEqual(actual: ReadonlyArray<File>, expected: ReadonlyArray<File>) {
     expect(actual).lengthOf(expected.length);
     for (let index in actual) {
       expect(actual[index].name).eq(expected[index].name);
