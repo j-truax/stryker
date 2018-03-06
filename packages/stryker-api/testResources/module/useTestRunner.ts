@@ -35,6 +35,11 @@ let runnerOptions: RunnerOptions = {
   strykerOptions: null
 };
 
+let runOptions: RunOptions = {
+  testHooks: 'test hooks',
+  timeout: 42
+};
+
 TestRunnerFactory.instance().register('MyTestRunner', MyTestRunner);
 let myTestRunner = TestRunnerFactory.instance().create('MyTestRunner', runnerOptions);
 if (!(myTestRunner instanceof MyTestRunner)) {
