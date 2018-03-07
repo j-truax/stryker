@@ -4,9 +4,8 @@ import {
   RunResult, RunOptions, TestRunnerFactory,
   TestStatus, RunStatus
 } from 'stryker-api/test_runner';
-import { EventEmitter } from 'events';
 
-class MyTestRunner extends EventEmitter implements TestRunner {
+class MyTestRunner implements TestRunner {
 
   run(options: RunOptions) {
     const coverage: CoverageCollection | CoverageCollectionPerTest = {
