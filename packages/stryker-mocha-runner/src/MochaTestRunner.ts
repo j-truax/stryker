@@ -1,36 +1,47 @@
 import { getLogger } from 'log4js';
-import { EventEmitter } from 'events';
-import { TestRunner, RunResult, RunStatus, RunnerOptions } from 'stryker-api/test_runner';
-import { FileDescriptor } from 'stryker-api/core';
+import { TestRunner, RunResult, RunStatus, RunnerOptions, RunOptions } from 'stryker-api/test_runner';
 import LibWrapper from './LibWrapper';
 import StrykerMochaReporter from './StrykerMochaReporter';
 import MochaRunnerOptions, { mochaOptionsKey } from './MochaRunnerOptions';
+import RequireCacheRecorder from './RequireCacheRecorder';
 
-export default class MochaTestRunner extends EventEmitter implements TestRunner {
-  private files: FileDescriptor[];
+const DEFAULT_TEST_PATTERN = 'test/*.js';
+
+export default class MochaTestRunner implements TestRunner {
+  private fileNames: string[];
   private log = getLogger(MochaTestRunner.name);
-  private mochaRunnerOptions: MochaRunnerOptions | undefined;
+  private mochaRunnerOptions: MochaRunnerOptions;
 
   constructor(runnerOptions: RunnerOptions) {
-    super();
-    this.files = runnerOptions.files;
     this.mochaRunnerOptions = runnerOptions.strykerOptions[mochaOptionsKey];
     this.additionalRequires();
   }
 
-  private purgeFiles() {
-    this.files.forEach(f => delete require.cache[f.name]);
+  init(): Promise<void> {
+    const globPatterns = this.mochaRunnerOptions.files || [DEFAULT_TEST_PATTERN];
+    return LibWrapper.glob(globPatterns)
+      .then(fileNames => {
+        if (fileNames.length) {
+          this.fileNames = fileNames;
+        } else {
+          throw new Error(`No files discovered (tried pattern(s) ${JSON.stringify(globPatterns, null, 2)}). Please specify the files (glob patterns) containing your tests in ${mochaOptionsKey}.files in your stryker.conf.js file.`);
+        }
+      });
   }
 
-  run(): Promise<RunResult> {
+  run(options: RunOptions): Promise<RunResult> {
     return new Promise<RunResult>((resolve, reject) => {
       try {
-        this.purgeFiles();
-        let mocha = new LibWrapper.Mocha({ reporter: StrykerMochaReporter as any, bail: true });
+        const mocha = new LibWrapper.Mocha({ reporter: StrykerMochaReporter as any, bail: true });
+        const requireCacheRecorder = new RequireCacheRecorder();
+        if (options.testHooks) {
+          LibWrapper.eval(options.testHooks);
+        }
         this.addFiles(mocha);
         this.configure(mocha);
         try {
           mocha.run((failures: number) => {
+            requireCacheRecorder.purge();
             const reporter = StrykerMochaReporter.CurrentInstance;
             if (reporter) {
               const result: RunResult = reporter.runResult;
@@ -46,6 +57,7 @@ export default class MochaTestRunner extends EventEmitter implements TestRunner 
             }
           });
         } catch (error) {
+          requireCacheRecorder.purge();
           resolve({
             status: RunStatus.Error,
             tests: [],
@@ -60,8 +72,8 @@ export default class MochaTestRunner extends EventEmitter implements TestRunner 
   }
 
   private addFiles(mocha: Mocha) {
-    this.files.filter(file => file.included).forEach(f => {
-      mocha.addFile(f.name);
+    this.fileNames.forEach(fileName => {
+      mocha.addFile(fileName);
     });
   }
 
@@ -82,7 +94,7 @@ export default class MochaTestRunner extends EventEmitter implements TestRunner 
   }
 
   private additionalRequires() {
-    if (this.mochaRunnerOptions && this.mochaRunnerOptions.require) {
+    if (this.mochaRunnerOptions.require) {
       this.mochaRunnerOptions.require.forEach(LibWrapper.require);
     }
   }
