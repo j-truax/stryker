@@ -67,7 +67,7 @@ class SlowInitAndDisposeTestRunner extends EventEmitter implements TestRunner {
   inInit: boolean;
 
   init() {
-    return new Promise(resolve => {
+    return new Promise<void>(resolve => {
       this.inInit = true;
       setTimeout(() => {
         this.inInit = false;
