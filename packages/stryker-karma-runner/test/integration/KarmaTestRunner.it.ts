@@ -194,7 +194,7 @@ describe('KarmaTestRunner', function () {
 
     it('should report Complete without errors', () => {
       return expect(sut.run({})).to.eventually.satisfy((runResult: RunResult) => {
-        expect(runResult.status).to.be.eq(RunStatus.Complete);
+        expect(runResult.status, JSON.stringify(runResult.errorMessages)).to.be.eq(RunStatus.Complete);
         return true;
       });
     });
