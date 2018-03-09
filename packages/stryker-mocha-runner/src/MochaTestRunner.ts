@@ -4,6 +4,7 @@ import LibWrapper from './LibWrapper';
 import StrykerMochaReporter from './StrykerMochaReporter';
 import MochaRunnerOptions, { mochaOptionsKey } from './MochaRunnerOptions';
 import RequireCacheRecorder from './RequireCacheRecorder';
+import { evalGlobal } from './utils';
 
 const DEFAULT_TEST_PATTERN = 'test/*.js';
 
@@ -35,7 +36,7 @@ export default class MochaTestRunner implements TestRunner {
         const mocha = new LibWrapper.Mocha({ reporter: StrykerMochaReporter as any, bail: true });
         const requireCacheRecorder = new RequireCacheRecorder();
         if (options.testHooks) {
-          LibWrapper.eval(options.testHooks);
+          evalGlobal(options.testHooks);
         }
         this.addFiles(mocha);
         this.configure(mocha);

@@ -7,6 +7,5 @@ import * as glob from 'fast-glob';
 export default class LibWrapper {
   static Mocha = Mocha;
   static require = require;
-  static eval = eval;
   static glob = (patterns: string[]) => glob<string>(patterns);
 }

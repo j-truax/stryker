@@ -1,6 +1,7 @@
 import * as Mocha from 'mocha';
 import MochaTestRunner from '../../src/MochaTestRunner';
 import LibWrapper from '../../src/LibWrapper';
+import * as utils from '../../src/utils';
 import { Mock, mock, logger, runnerOptions } from '../helpers/mockHelpers';
 import { expect } from 'chai';
 import MochaRunnerOptions from '../../src/MochaRunnerOptions';
@@ -22,7 +23,7 @@ describe('MochaTestRunner', () => {
     MochaStub = sandbox.stub(LibWrapper, 'Mocha');
     requireStub = sandbox.stub(LibWrapper, 'require');
     globStub = sandbox.stub(LibWrapper, 'glob');
-    sandbox.stub(LibWrapper, 'eval');
+    sandbox.stub(utils, 'evalGlobal');
     requireCacheRecorderMock = mock(RequireCacheRecorder);
     sandbox.stub(requireCacheRecorderModule, 'default').returns(requireCacheRecorderMock);
     mocha = mock(Mocha);
@@ -86,7 +87,7 @@ describe('MochaTestRunner', () => {
     sut = new MochaTestRunner(runnerOptions());
     await sut.init();
     await actRun({ timeout: 0, testHooks: 'foobar();' });
-    expect(LibWrapper.eval).calledWith('foobar();');
+    expect(utils.evalGlobal).calledWith('foobar();');
   });
 
   it('should create the require cache recorder before adding the files', async () => {

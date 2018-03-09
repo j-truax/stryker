@@ -40,7 +40,8 @@
     "tslib": "^1.5.0"
   },
   "devDependencies": {
-    "stryker-api": "^0.13.0"
+    "stryker-api": "^0.13.0",
+    "stryker-mocha-framework": "^0.8.3"
   },
   "peerDependencies": {
     "mocha": ">= 2.3.3 < 6",
