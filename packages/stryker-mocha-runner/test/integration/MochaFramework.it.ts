@@ -37,7 +37,7 @@ describe('Integration with stryker-mocha-framework', () => {
       strykerOptions: {
         mochaOptions: {
           files: [
-            path.resolve(__dirname, '..', '..', 'testResources', 'sampleProject', 'myMathSpec.js')
+            path.resolve(__dirname, '..', '..', 'testResources', 'sampleProject', 'MyMathSpec.js')
           ]
         }
       }
