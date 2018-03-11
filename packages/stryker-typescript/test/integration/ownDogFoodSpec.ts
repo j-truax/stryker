@@ -2,17 +2,16 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { expect } from 'chai';
 import { Config } from 'stryker-api/config';
-import { TextFile } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import TypescriptConfigEditor from '../../src/TypescriptConfigEditor';
 import TypescriptTranspiler from '../../src/TypescriptTranspiler';
-import { textFile } from '../helpers/producers';
 import { setGlobalLogLevel } from 'log4js';
 
 describe('stryker-typescript', function () {
   this.timeout(20000);
 
   let config: Config;
-  let inputFiles: TextFile[];
+  let inputFiles: File[];
 
   beforeEach(() => {
     setGlobalLogLevel('error');
@@ -22,10 +21,7 @@ describe('stryker-typescript', function () {
       tsconfigFile: path.resolve(__dirname, '..', '..', 'tsconfig.json'),
     });
     configEditor.edit(config);
-    inputFiles = config.files.map((file): TextFile => (textFile({
-      name: file as string,
-      content: fs.readFileSync(file as string, 'utf8')
-    })));
+    inputFiles = config.files.map((file) => new File(file, fs.readFileSync(file as string, 'utf8')));
   });
 
   afterEach(() => {
@@ -42,7 +38,7 @@ describe('stryker-typescript', function () {
 
   it('should result in an error if a variable is declared as any and noImplicitAny = true', async () => {
     const transpiler = new TypescriptTranspiler({ config, produceSourceMaps: true });
-    inputFiles[0].content += 'function foo(bar) { return bar; } ';
+    inputFiles[0].textContent += 'function foo(bar) { return bar; } ';
     const transpileResult = await transpiler.transpile(inputFiles);
     expect(transpileResult.error).contains('error TS7006: Parameter \'bar\' implicitly has an \'any\' type');
     expect(transpileResult.outputFiles.length).eq(0);
@@ -50,7 +46,7 @@ describe('stryker-typescript', function () {
 
   it('should not result in an error if a variable is declared as any and noImplicitAny = false', async () => {
     config['tsconfig'].noImplicitAny = false;
-    inputFiles[0].content += 'const shouldResultInError = 3';
+    inputFiles[0].textContent += 'const shouldResultInError = 3';
     const transpiler = new TypescriptTranspiler({ config, produceSourceMaps: true });
     const transpileResult = await transpiler.transpile(inputFiles);
     expect(transpileResult.error).null;

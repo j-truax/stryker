@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { expect } from 'chai';
 import { Config } from 'stryker-api/config';
-import { TextFile, FileKind } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import TypescriptConfigEditor from '../../src/TypescriptConfigEditor';
 import TypescriptMutator from '../../src/TypescriptMutator';
 import TypescriptTranspiler from '../../src/TypescriptTranspiler';
@@ -13,7 +13,7 @@ describe('Sample integration', function () {
   this.timeout(10000);
 
   let config: Config;
-  let inputFiles: TextFile[];
+  let inputFiles: File[];
 
   beforeEach(() => {
     setGlobalLogLevel('error');
@@ -23,14 +23,7 @@ describe('Sample integration', function () {
       tsconfigFile: path.resolve(__dirname, '..', '..', 'testResources', 'sampleProject', 'tsconfig.json'),
     });
     configEditor.edit(config);
-    inputFiles = config.files.map((file): TextFile => ({
-      name: file as string,
-      content: fs.readFileSync(file as string, 'utf8'),
-      included: true,
-      mutated: true,
-      transpiled: true,
-      kind: FileKind.Text
-    }));
+    inputFiles = config.files.map((file) => new File(file, fs.readFileSync(file as string, 'utf8')));
   });
 
   afterEach(() => {
@@ -82,14 +75,8 @@ describe('Sample integration', function () {
     expect(errorResult.outputFiles).lengthOf(0);
   });
 
-  function mutateFile(file: TextFile, mutant: Mutant): TextFile {
-    return {
-      name: file.name,
-      content: file.content.slice(0, mutant.range[0]) + mutant.replacement + file.content.slice(mutant.range[1]),
-      mutated: true,
-      included: true,
-      transpiled: true,
-      kind: FileKind.Text
-    };
+  function mutateFile(file: File, mutant: Mutant): File {
+    return new File(file.name,
+      file.content.slice(0, mutant.range[0]) + mutant.replacement + file.content.slice(mutant.range[1]));
   }
 });

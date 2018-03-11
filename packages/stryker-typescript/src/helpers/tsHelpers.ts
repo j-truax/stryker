@@ -1,24 +1,15 @@
 import * as os from 'os';
-import { File, TextFile, FileKind } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import { CONFIG_KEY_OPTIONS, CONFIG_KEY_FILE } from './keys';
 import { Config } from 'stryker-api/config';
 import * as ts from 'typescript';
 import * as path from 'path';
 import * as semver from 'semver';
 
-export function createProgram(inputFiles: File[], strykerConfig: Config) {
-  const files = inputFiles
-    .filter(file => file.kind === FileKind.Text)
-    .map(file => file.name);
-  const options = getTSConfig(strykerConfig);
-
-  return ts.createProgram(files, options || {});
-}
-
-export function parseFile(file: TextFile, target: ts.ScriptTarget | undefined) {
+export function parseFile(file: File, target: ts.ScriptTarget | undefined) {
   return ts.createSourceFile(
     file.name,
-    file.content,
+    file.textContent,
     target || ts.ScriptTarget.ES5,
     /*setParentNodes*/ true);
 }
@@ -82,8 +73,7 @@ function tsExtensions() {
 
 
 export function isTypescriptFile(file: File) {
-  return file.kind === FileKind.Text &&
-    tsExtensions().some(extension => file.name.endsWith(extension));
+  return tsExtensions().some(extension => file.name.endsWith(extension));
 }
 
 export function isJavaScriptFile(file: ts.OutputFile) {
@@ -104,8 +94,8 @@ export function isHeaderFile(file: File) {
 /**
  * Returns all the files that are considered typescript files (text files with *.ts or something like that)
  */
-export function filterTypescriptFiles(files: File[]): TextFile[] {
-  return files.filter(isTypescriptFile) as TextFile[];
+export function filterTypescriptFiles(files: File[]) {
+  return files.filter(isTypescriptFile);
 }
 
 /**
