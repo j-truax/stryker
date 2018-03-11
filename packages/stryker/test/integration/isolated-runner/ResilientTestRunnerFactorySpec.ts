@@ -27,7 +27,6 @@ describe('ResilientTestRunnerFactory', function () {
       port: 0,
       'someRegex': /someRegex/
     },
-    files: [],
     port: 0,
     sandboxWorkingFolder: path.resolve('./test/integration/isolated-runner')
   };

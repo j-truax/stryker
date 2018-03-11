@@ -13,7 +13,7 @@ import TranspiledMutant from '../../../src/TranspiledMutant';
 import { MutantStatus } from 'stryker-api/report';
 import MutantTranspiler, * as mutantTranspiler from '../../../src/transpiler/MutantTranspiler';
 import SandboxPool, * as sandboxPool from '../../../src/SandboxPool';
-import { transpiledMutant, testResult, Mock, mock, textFile, config, testFramework, testableMutant, mutantResult, transpileResult } from '../../helpers/producers';
+import { transpiledMutant, testResult, Mock, mock, config, testFramework, testableMutant, mutantResult, transpileResult, file } from '../../helpers/producers';
 import '../../helpers/globals';
 import TestableMutant from '../../../src/TestableMutant';
 
@@ -43,14 +43,14 @@ describe('MutationTestExecutor', () => {
   beforeEach(() => {
     sandboxPoolMock = mock(SandboxPool);
     mutantTranspilerMock = mock(MutantTranspiler);
-    initialTranspileResult = transpileResult({ outputFiles: [textFile(), textFile()] });
+    initialTranspileResult = transpileResult({ outputFiles: [file(), file()] });
     mutantTranspilerMock.initialize.resolves(initialTranspileResult);
     sandboxPoolMock.disposeAll.resolves();
     testFrameworkMock = testFramework();
     sandbox.stub(sandboxPool, 'default').returns(sandboxPoolMock);
     sandbox.stub(mutantTranspiler, 'default').returns(mutantTranspilerMock);
     reporter = mock(BroadcastReporter);
-    inputFiles = [textFile({ name: 'input.ts' })];
+    inputFiles = [new File('input.ts', '')];
     expectedConfig = config();
     mutants = [testableMutant()];
   });

@@ -24,7 +24,6 @@ describe('IsolatedTestRunnerAdapter', () => {
   beforeEach(() => {
     runnerOptions = {
       port: 42,
-      files: [],
       sandboxWorkingFolder: 'a working directory',
       strykerOptions: {}
     };

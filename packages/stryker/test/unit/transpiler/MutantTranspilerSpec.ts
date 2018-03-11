@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import MutantTranspiler from '../../../src/transpiler/MutantTranspiler';
 import ChildProcessProxy from '../../../src/child-proxy/ChildProcessProxy';
 import TranspilerFacade, * as transpilerFacade from '../../../src/transpiler/TranspilerFacade';
-import { Mock, mock, transpileResult, config, textFile, webFile, testableMutant } from '../../helpers/producers';
+import { Mock, mock, transpileResult, config, testableMutant, file } from '../../helpers/producers';
 import { TranspileResult } from 'stryker-api/transpile';
 import '../../helpers/globals';
 import TranspiledMutant from '../../../src/TranspiledMutant';
@@ -42,7 +42,7 @@ describe('MutantTranspiler', () => {
     describe('initialize', () => {
 
       it('should transpile all files', () => {
-        const expectedFiles = [textFile(), webFile()];
+        const expectedFiles = [file()];
         sut = new MutantTranspiler(config({ transpilers: ['transpiler'] }));
         const actualResult = sut.initialize(expectedFiles);
         expect(transpilerFacadeMock.transpile).calledWith(expectedFiles);
@@ -81,7 +81,7 @@ describe('MutantTranspiler', () => {
         transpilerFacadeMock.transpile.reset();
         transpilerFacadeMock.transpile.resolves(transpileResultOne);
         const mutants = [testableMutant()];
-        const files = [textFile()];
+        const files = [file()];
         await sut.initialize(files);
 
         // Act
@@ -141,7 +141,7 @@ describe('MutantTranspiler', () => {
     });
 
     it('should transpile the files when initialized', async () => {
-      const expectedFiles = [textFile(), webFile()];
+      const expectedFiles = [file()];
       const actualFiles = await sut.initialize(expectedFiles);
       expect(transpilerFacadeMock.transpile).calledWith(expectedFiles);
       expect(actualFiles).eq(transpileResultOne);

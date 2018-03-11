@@ -17,7 +17,7 @@ export default class TranspilerFacade implements Transpiler {
     }
   }
 
-  public transpile(files: File[]): Promise<TranspileResult> {
+  public transpile(files: ReadonlyArray<File>): Promise<TranspileResult> {
     return this.performTranspileChain(this.createPassThruTranspileResult(files));
   }
 
@@ -39,7 +39,7 @@ export default class TranspilerFacade implements Transpiler {
     }
   }
 
-  private createPassThruTranspileResult(input: File[]): TranspileResult {
+  private createPassThruTranspileResult(input: ReadonlyArray<File>): TranspileResult {
     return {
       error: null,
       outputFiles: input

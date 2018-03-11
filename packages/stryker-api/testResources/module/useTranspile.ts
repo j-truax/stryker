@@ -6,7 +6,7 @@ class MyTranspiler implements Transpiler {
 
   constructor(private transpilerOptions: TranspilerOptions) { }
 
-  transpile(files: File[]): Promise<TranspileResult> {
+  transpile(files: ReadonlyArray<File>): Promise<TranspileResult> {
     return Promise.resolve({
       outputFiles: [new File('foo/bar.js', Buffer.from('bar.js'))],
       error: null

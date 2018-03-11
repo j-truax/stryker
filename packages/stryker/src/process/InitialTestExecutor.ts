@@ -9,6 +9,7 @@ import { getLogger } from 'log4js';
 import Sandbox from '../Sandbox';
 import Timer from '../utils/Timer';
 import CoverageInstrumenterTranspiler, { CoverageMapsByFile } from '../transpiler/CoverageInstrumenterTranspiler';
+import InputFileCollection from '../input/InputFileCollection';
 
 // The initial run might take a while.
 // For example: angular-bootstrap takes up to 45 seconds.
@@ -17,7 +18,7 @@ const INITIAL_RUN_TIMEOUT = 60 * 1000 * 5;
 
 export interface InitialTestRunResult {
   runResult: RunResult;
-  transpiledFiles: File[];
+  transpiledFiles: ReadonlyArray<File>;
   coverageMaps: CoverageMapsByFile;
 }
 
@@ -25,11 +26,11 @@ export default class InitialTestExecutor {
 
   private readonly log = getLogger(InitialTestExecutor.name);
 
-  constructor(private options: Config, private files: File[], private testFramework: TestFramework | null, private timer: Timer) {
+  constructor(private options: Config, private inputFiles: InputFileCollection, private testFramework: TestFramework | null, private timer: Timer) {
   }
 
   async run(): Promise<InitialTestRunResult> {
-    if (this.files.length > 0) {
+    if (this.inputFiles.files.length > 0) {
       this.log.info(`Starting initial test run. This may take a while.`);
       const result = await this.initialRunInSandbox();
       this.validateResult(result.runResult);
@@ -43,7 +44,7 @@ export default class InitialTestExecutor {
   private async initialRunInSandbox(): Promise<InitialTestRunResult> {
     const coverageInstrumenterTranspiler = this.createCoverageInstrumenterTranspiler();
     const transpilerFacade = this.createTranspilerFacade(coverageInstrumenterTranspiler);
-    const transpileResult = await transpilerFacade.transpile(this.files);
+    const transpileResult = await transpilerFacade.transpile(this.inputFiles.files);
     if (transpileResult.error) {
       throw new Error(`Could not transpile input files: ${transpileResult.error}`);
     } else {
@@ -113,12 +114,12 @@ export default class InitialTestExecutor {
   }
 
   private createCoverageInstrumenterTranspiler() {
-    return new CoverageInstrumenterTranspiler({ produceSourceMaps: true, config: this.options }, this.testFramework);
+    return new CoverageInstrumenterTranspiler({ produceSourceMaps: true, config: this.options }, this.testFramework, this.inputFiles.mutateFileNames);
   }
 
   private logTranspileResult(transpileResult: TranspileResult) {
     if (this.options.transpilers.length && this.log.isDebugEnabled()) {
-      this.log.debug(`Transpiled files in order:${EOL}${transpileResult.outputFiles.map(f => `${f.name} (included: ${f.included})`).join(EOL)}`);
+      this.log.debug(`Transpiled files: ${JSON.stringify(transpileResult.outputFiles.map(f => `${f.name}`), null, 2)}`);
     }
   }
 

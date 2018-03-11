@@ -1,6 +1,6 @@
 import { File } from '../../core';
 
 export default interface TranspileResult {
-  outputFiles: File[];
+  outputFiles: ReadonlyArray<File>;
   error: string | null;
 }

@@ -3,7 +3,7 @@ import * as path from 'path';
 import { getLogger } from 'log4js';
 import * as mkdirp from 'mkdirp';
 import { RunResult } from 'stryker-api/test_runner';
-import { File, FileKind, FileDescriptor } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import { TestFramework } from 'stryker-api/test_framework';
 import { wrapInClosure } from './utils/objectUtils';
 import TestRunnerDecorator from './isolated-runner/TestRunnerDecorator';
@@ -18,6 +18,8 @@ interface FileMap {
   [sourceFile: string]: string;
 }
 
+const TEST_HOOKS_FILE_NAME = '___testHooksForStryker.js';
+
 export default class Sandbox {
 
   private readonly log = getLogger(Sandbox.name);
@@ -25,22 +27,15 @@ export default class Sandbox {
   private fileMap: FileMap;
   private files: File[];
   private workingFolder: string;
-  private testHooksFile = path.resolve('___testHooksForStryker.js');
+  private testHooksFile = path.resolve(TEST_HOOKS_FILE_NAME);
 
   private constructor(private options: Config, private index: number, files: ReadonlyArray<File>, private testFramework: TestFramework | null) {
     this.workingFolder = TempFolder.instance().createRandomFolder('sandbox');
     this.log.debug('Creating a sandbox for files in %s', this.workingFolder);
     this.files = files.slice(); // Create a copy
     if (testFramework) {
-      this.testHooksFile = path.resolve('___testHooksForStryker.js');
-      this.files.unshift({
-        name: this.testHooksFile,
-        content: '',
-        mutated: false,
-        included: true,
-        transpiled: false,
-        kind: FileKind.Text
-      });
+      this.testHooksFile = path.resolve(TEST_HOOKS_FILE_NAME);
+      this.files.unshift(new File(this.testHooksFile, ''));
     }
   }
 
@@ -74,26 +69,15 @@ export default class Sandbox {
     return runResult;
   }
 
-  private reset(mutatedFiles: File[]) {
+  private reset(mutatedFiles: ReadonlyArray<File>) {
     const originalFiles = this.files.filter(originalFile => mutatedFiles.some(mutatedFile => mutatedFile.name === originalFile.name));
 
-    return Promise.all(originalFiles.map(file => {
-      if (file.kind !== FileKind.Web) {
-        return fileUtils.writeFile(this.fileMap[file.name], file.content);
-      } else {
-        return Promise.resolve();
-      }
-    }));
+    return Promise.all(originalFiles.map(file => fileUtils.writeFile(this.fileMap[file.name], file.content)));
   }
 
   private writeFileInSandbox(file: File): Promise<void> {
-    switch (file.kind) {
-      case FileKind.Web:
-        return Promise.resolve();
-      default:
-        const fileNameInSandbox = this.fileMap[file.name];
-        return fileUtils.writeFile(fileNameInSandbox, file.content);
-    }
+    const fileNameInSandbox = this.fileMap[file.name];
+    return fileUtils.writeFile(fileNameInSandbox, file.content);
   }
 
   private fillSandbox(): Promise<void[]> {
@@ -104,31 +88,17 @@ export default class Sandbox {
   }
 
   private fillFile(file: File): Promise<void> {
-    switch (file.kind) {
-      case FileKind.Web:
-        this.fileMap[file.name] = file.name;
-        return Promise.resolve();
-      default:
-        const cwd = process.cwd();
-        const relativePath = path.relative(cwd, file.name);
-        const folderName = path.join(this.workingFolder, path.dirname(relativePath));
-        mkdirp.sync(folderName);
-        const targetFile = path.join(folderName, path.basename(relativePath));
-        this.fileMap[file.name] = targetFile;
-        return fileUtils.writeFile(targetFile, file.content);
-    }
+    const cwd = process.cwd();
+    const relativePath = path.relative(cwd, file.name);
+    const folderName = path.join(this.workingFolder, path.dirname(relativePath));
+    mkdirp.sync(folderName);
+    const targetFile = path.join(folderName, path.basename(relativePath));
+    this.fileMap[file.name] = targetFile;
+    return fileUtils.writeFile(targetFile, file.content);
   }
 
   private initializeTestRunner(): void | Promise<any> {
-    const files: FileDescriptor[] = this.files.map(originalFile => ({
-      name: this.fileMap[originalFile.name],
-      mutated: originalFile.mutated,
-      included: originalFile.included,
-      kind: originalFile.kind,
-      transpiled: originalFile.transpiled
-    }));
     const settings: IsolatedRunnerOptions = {
-      files,
       strykerOptions: this.options,
       port: this.options.port + this.index,
       sandboxWorkingFolder: this.workingFolder

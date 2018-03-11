@@ -2,7 +2,8 @@ import { expect } from 'chai';
 import { Config } from 'stryker-api/config';
 import TranspilerFacade from '../../../src/transpiler/TranspilerFacade';
 import { Transpiler, TranspilerFactory, TranspileResult } from 'stryker-api/transpile';
-import { file, mock, Mock, transpileResult } from '../../helpers/producers';
+import { mock, Mock, transpileResult } from '../../helpers/producers';
+import { File } from 'stryker-api/core';
 
 describe('TranspilerFacade', () => {
   let createStub: sinon.SinonStub;
@@ -19,7 +20,7 @@ describe('TranspilerFacade', () => {
     });
 
     it('should return input when `transpile` is called', async () => {
-      const input = [file({ name: 'input' })];
+      const input = [new File('input', '')];
       const result = await sut.transpile(input);
       expect(createStub).not.called;
       expect(result.error).is.null;
@@ -40,8 +41,8 @@ describe('TranspilerFacade', () => {
       config.transpilers.push('transpiler-one', 'transpiler-two');
       transpilerOne = mock(TranspilerFacade);
       transpilerTwo = mock(TranspilerFacade);
-      resultOne = transpileResult({ outputFiles: [file({ name: 'result-1' })] });
-      resultTwo = transpileResult({ outputFiles: [file({ name: 'result-2' })] });
+      resultOne = transpileResult({ outputFiles: [new File('result-1', '')] });
+      resultTwo = transpileResult({ outputFiles: [new File('result-2', '')] });
       createStub
         .withArgs('transpiler-one').returns(transpilerOne)
         .withArgs('transpiler-two').returns(transpilerTwo);
@@ -58,7 +59,7 @@ describe('TranspilerFacade', () => {
 
     it('should chain the transpilers when `transpile` is called', async () => {
       sut = new TranspilerFacade({ config, produceSourceMaps: true });
-      const input = [file({ name: 'input' })];
+      const input = [new File('input', '')];
       const result = await sut.transpile(input);
       expect(result).eq(resultTwo);
       expect(transpilerOne.transpile).calledWith(input);
@@ -67,9 +68,9 @@ describe('TranspilerFacade', () => {
 
     it('should chain an additional transpiler when requested', async () => {
       const additionalTranspiler = mock(TranspilerFacade);
-      const expectedResult = transpileResult({ outputFiles: [file({ name: 'result-3' })] });
+      const expectedResult = transpileResult({ outputFiles: [new File('result-3', '')] });
       additionalTranspiler.transpile.returns(expectedResult);
-      const input = [file({ name: 'input' })];
+      const input = [new File('input', '')];
       sut = new TranspilerFacade(
         { config, produceSourceMaps: true },
         { name: 'someTranspiler', transpiler: additionalTranspiler }
@@ -82,7 +83,7 @@ describe('TranspilerFacade', () => {
 
     it('should stop chaining if an error occurs during `transpile`', async () => {
       sut = new TranspilerFacade({ config, produceSourceMaps: true });
-      const input = [file({ name: 'input' })];
+      const input = [new File('input', '')];
       resultOne.error = 'an error';
       const result = await sut.transpile(input);
       expect(result).eq(resultOne);

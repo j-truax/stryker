@@ -16,7 +16,7 @@ class IsolatedTestRunnerAdapterWorker {
 
   private listenToMessages() {
     process.on('message', (serializedMessage: string) => {
-      const message: AdapterMessage = deserialize(serializedMessage);
+      const message = deserialize<AdapterMessage>(serializedMessage);
       switch (message.kind) {
         case 'start':
           this.start(message);

@@ -4,9 +4,8 @@ import {
   RunResult, RunOptions, TestRunnerFactory,
   TestStatus, RunStatus
 } from 'stryker-api/test_runner';
-import { EventEmitter } from 'events';
 
-class MyTestRunner extends EventEmitter implements TestRunner {
+class MyTestRunner implements TestRunner {
 
   run(options: RunOptions) {
     const coverage: CoverageCollection | CoverageCollectionPerTest = {
@@ -33,6 +32,11 @@ class MyTestRunner extends EventEmitter implements TestRunner {
 let runnerOptions: RunnerOptions = {
   port: 1,
   strykerOptions: null
+};
+
+let runOptions: RunOptions = {
+  testHooks: 'test hooks',
+  timeout: 42
 };
 
 TestRunnerFactory.instance().register('MyTestRunner', MyTestRunner);
