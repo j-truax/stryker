@@ -21,11 +21,16 @@ export class ProjectLoader {
 
   private static normalize(content: Buffer) {
     // Remove carriage returns from the content buffer
-    const normalizedContent = content.filter(byte => byte !== CARRIAGE_RETURN);
     if (process.version.startsWith('v4')) {
-      return new Buffer(normalizedContent);
+      const newContent: number[] = [];
+      for (const byte of (content as any)) {
+        if (byte !== CARRIAGE_RETURN) {
+          newContent.push(byte);
+        }
+      }
+      return Buffer.from(newContent);
     } else {
-      return Buffer.from(normalizedContent);
+      return Buffer.from(content.filter(byte => byte !== CARRIAGE_RETURN));
     }
   }
 
