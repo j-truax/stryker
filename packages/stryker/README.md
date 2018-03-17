@@ -186,6 +186,25 @@ The `dashboard` reporter is a special kind of reporter. It sends a report to htt
 
 All `TRAVIS` environment variables are set by Travis for each build. However, you will need to pass the `STRYKER\_DASHBOARD\_API\_KEY` environment variable yourself. You can create one for your repository by logging in on [the stryker dashboard](https://dashboard.stryker-mutator.io). We strongly recommend you use [encrypted environment variables](https://docs.travis-ci.com/user/environment-variables/#Encrypting-environment-variables).
   
+#### Files in the sandbox
+**Command line:** `[--files|-f] src/**/*.js,a.js,test/**/*.js`  
+**Config file:** `files: ['src/**/*.js', '!src/**/index.js', 'test/**/*.js']`  
+**Default value:** All files known to git
+**Mandatory**: No
+**Description:**  
+With `files` you can choose which files should be included in your test runner sandbox. 
+This is normally not needed as it defaults to all files known to git. 
+Try it out yourself with this command: `git ls-files --others --exclude-standard --cached`.
+
+If you do need to override `files` (for example: when your project does not live in a git repository),
+you can override the files here.
+
+When using the command line, the list can only contain a comma separated list of globbing expressions.  
+When using the config file you can provide an array with `string`s or `InputFileDescriptor` objects, like so:  
+
+*Note*: To include a file/folder which start with an exclamation mark (`!`), use the `InputFileDescriptor` syntax.  
++You can *ignore* files by adding an exclamation mark (`!`) at the start of an expression.
+
 #### Plugins  
 **Command line:** `--plugins stryker-html-reporter,stryker-karma-runner`  
 **Config file:** `plugins: ['stryker-html-reporter', 'stryker-karma-runner']`  
