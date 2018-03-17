@@ -47,7 +47,8 @@
     "@types/semver": "^5.4.0",
     "@types/source-map": "0.5.1",
     "stryker-api": "^0.13.0",
-    "stryker-mutator-specification": "^0.2.1"
+    "stryker-mutator-specification": "^0.2.1",
+    "surrial": "^0.1.3"
   },
   "peerDependencies": {
     "stryker-api": "^0.13.0",

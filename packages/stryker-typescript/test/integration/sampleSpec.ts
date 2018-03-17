@@ -8,6 +8,7 @@ import TypescriptConfigEditor from '../../src/TypescriptConfigEditor';
 import TypescriptMutator from '../../src/TypescriptMutator';
 import TypescriptTranspiler from '../../src/TypescriptTranspiler';
 import { setGlobalLogLevel } from 'log4js';
+import { CONFIG_KEY } from '../../src/helpers/keys';
 
 describe('Sample integration', function () {
   this.timeout(10000);
@@ -23,7 +24,7 @@ describe('Sample integration', function () {
       tsconfigFile: path.resolve(__dirname, '..', '..', 'testResources', 'sampleProject', 'tsconfig.json'),
     });
     configEditor.edit(config);
-    inputFiles = config.files.map((file) => new File(file, fs.readFileSync(file as string, 'utf8')));
+    inputFiles = config[CONFIG_KEY].fileNames.map((fileName: string) => new File(fileName, fs.readFileSync(fileName, 'utf8')));
   });
 
   afterEach(() => {

@@ -6,16 +6,23 @@ import TypescriptTranspiler from '../../src/TypescriptTranspiler';
 import { Config } from 'stryker-api/config';
 import { File } from 'stryker-api/core';
 import { EmitOutput } from '../../src/transpiler/TranspilingLanguageService';
+import { serialize } from 'surrial';
+import TranspileFilter from '../../src/transpiler/TranspileFilter';
 
 describe('TypescriptTranspiler', () => {
 
   let languageService: Mock<TranspilingLanguageService>;
   let sut: TypescriptTranspiler;
   let config: Config;
+  let transpileFilterMock: Mock<TranspileFilter>;
 
   beforeEach(() => {
     config = new Config();
     languageService = mock(TranspilingLanguageService);
+    transpileFilterMock = mock(TranspileFilter);
+    // Add the isIncluded method as it is absent from the abstract class
+    transpileFilterMock.isIncluded = sandbox.stub();
+    sandbox.stub(TranspileFilter, 'create').returns(transpileFilterMock);
     sandbox.stub(transpilingLanguageService, 'default').returns(languageService);
     sandbox.stub(log4js, 'setGlobalLogLevel');
   });
@@ -27,97 +34,137 @@ describe('TypescriptTranspiler', () => {
   });
 
   describe('transpile', () => {
-    let singleFileOutputEnabled: boolean;
-
-    function makeOutputFile(file: File): EmitOutput {
-      const copy = Object.assign({}, file);
-      if (singleFileOutputEnabled) {
-        const singleFileOutput = new File('allOutput.js', 'single output');
-        return { singleResult: singleFileOutputEnabled, outputFiles: [singleFileOutput] };
-      } else if (file.name.endsWith('.ts') || file.name.endsWith('.js')) {
-        const copy = new File(file.name.replace('.ts', '.js'), file.content);
-        return { singleResult: singleFileOutputEnabled, outputFiles: [copy] };
-      } else {
-        throw new Error(`Could not transpile "${file.name}"`);
-      }
-    }
 
     beforeEach(() => {
-      singleFileOutputEnabled = false;
       languageService.getSemanticDiagnostics.returns([]); // no errors by default
-      languageService.emit.callsFake(makeOutputFile);
       sut = new TypescriptTranspiler({ config, produceSourceMaps: true });
     });
 
     it('should transpile given files', async () => {
+      // Arrange
+      const expected = [
+        new File('foo.js', 'foo'),
+        new File('bar.js', 'bar')
+      ];
+      arrangeIncludedFiles();
+      languageService.emit
+        .withArgs('foo.ts').returns(multiResult(expected[0]))
+        .withArgs('bar.ts').returns(multiResult(expected[1]));
+
+      // Act
       const result = await sut.transpile([
         new File('foo.ts', ''),
         new File('bar.ts', '')
       ]);
+
+      // Assert
       expect(result.error).eq(null);
-      expect(result.outputFiles).deep.eq([
-        new File('foo.ts', ''),
-        new File('bar.ts', '')
-      ]);
+      expectFilesEqual(result.outputFiles, expected);
     });
 
     it('should keep file order', async () => {
+      // Arrange
       const input = [
         new File('file1.js', ''),
         new File('file2.ts', ''),
-        new File('file3.bin', ''),
         new File('file4.ts', ''),
-        new File('file5.d.ts', '')
       ];
+      arrangeIncludedFiles(input.slice(1));
+      languageService.emit
+        .withArgs('file2.ts').returns(multiResult(new File('file2.js', 'file2')))
+        .withArgs('file4.ts').returns(multiResult(new File('file4.js', 'file4')));
+
+      // Act
       const result = await sut.transpile(input);
+
+      // Assert
       expect(result.error).eq(null);
-      expect(result.outputFiles).deep.eq([
-        new File('file1.js', ''),
-        new File('file2.js', ''),
-        new File('file3.bin', ''),
-        new File('file4.js', '')
+      expectFilesEqual(result.outputFiles, [
+        input[0],
+        new File('file2.js', 'file2'),
+        new File('file4.js', 'file4')
       ]);
+    });
+
+    it('should not transpile header files', async () => {
+      // Arrange
+      const input = [
+        new File('file1.ts', ''),
+        new File('file2.d.ts', ''),
+      ];
+      arrangeIncludedFiles();
+      languageService.emit.returns(multiResult(new File('file1.js', '')));
+
+      // Act
+      const result = await sut.transpile(input);
+
+      // Assert
+      expect(result.error).eq(null);
+      expectFilesEqual(result.outputFiles, [new File('file1.js', ''), input[1]]);
+      expect(languageService.emit).calledOnce;
+      expect(languageService.emit).calledWith('file1.ts');
     });
 
     it('should keep order if single output result file', async () => {
-      singleFileOutputEnabled = true;
+      // Arrange
       const input = [
-        new File('file1.ts', ''),
-        new File('file2.ts', ''),
-        new File('file3.bin', ''),
-        new File('file4.ts', ''),
-        new File('file5.ts', '')
+        new File('file1.ts', 'file1'),
+        new File('file2.ts', 'file2'),
+        new File('file3.bin', Buffer.from([1, 2, 3])),
+        new File('file4.ts', 'file4'),
+        new File('file5.ts', 'file5')
       ];
-      const output = await sut.transpile(input);
-      expect(output.error).eq(null);
-      expect(output.outputFiles).deep.eq([
-        new File('file1.ts', ''),
-        new File('allOutput.js', 'single output'),
-        new File('file3.bin', ''),
-        new File('file5.ts', '')
-      ]);
-    });
+      const allOutput = new File('allOutput.js', 'single output');
+      const emitResult: EmitOutput = {
+        singleResult: true,
+        outputFiles: [allOutput]
+      };
+      languageService.emit.returns(emitResult);
+      arrangeIncludedFiles([input[1], input[3]]);
 
-    it('should only emit valid typescript files', () => {
-      const input = [
-        new File('file1.ts', ''), // OK
-        new File('file2.ts', ''), // NOK: transpiled: false
-        new File('file3.ts', ''), // NOK: binary file
-        new File('file4.d.ts', ''), // NOK: *.d.ts file
-        new File('file5.js', ''), // NOK: transpiled: false
-        new File('file6.js', '') // OK, transpiled JS file
-      ];
-      sut.transpile(input);
-      expect(languageService.emit).calledWith(textFile({ name: 'file1.ts', transpiled: true }));
-      expect(languageService.emit).calledWith(textFile({ name: 'file6.js', transpiled: true }));
+      // Act
+      const output = await sut.transpile(input);
+
+      // Assert
+      expect(output.error).eq(null);
+      expectFilesEqual(output.outputFiles, [
+        new File('file1.ts', 'file1'),
+        allOutput,
+        new File('file3.bin', Buffer.from([1, 2, 3])),
+        new File('file5.ts', 'file5')
+      ]);
+      expect(languageService.emit).calledOnce;
+      expect(languageService.emit).calledWith('file2.ts');
     });
 
     it('should return errors when there are diagnostic messages', async () => {
       languageService.getSemanticDiagnostics.returns('foobar');
-      const input = [textFile({ name: 'file1.ts' }), textFile({ name: 'file2.ts' })];
+      arrangeIncludedFiles();
+      const input = [new File('file1.ts', 'file1'), new File('file2.ts', 'file2')];
       const result = await sut.transpile(input);
       expect(result.error).eq('foobar');
       expect(result.outputFiles).lengthOf(0);
     });
   });
+
+  function expectFilesEqual(actual: ReadonlyArray<File>, expected: ReadonlyArray<File>) {
+    expect(serialize(actual)).eq(serialize(expected));
+  }
+
+  function multiResult(file: File): EmitOutput {
+    return {
+      singleResult: false,
+      outputFiles: [file]
+    };
+  }
+
+  function arrangeIncludedFiles(files?: File[]) {
+    if (files) {
+      transpileFilterMock.filterIsIncluded.returns(files);
+      transpileFilterMock.isIncluded.callsFake((fileName: string) => files.some(file => file.name === fileName));
+    } else {
+      transpileFilterMock.filterIsIncluded.returnsArg(0);
+      transpileFilterMock.isIncluded.returns(true);
+    }
+  }
 });

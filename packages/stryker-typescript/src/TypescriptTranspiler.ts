@@ -1,62 +1,72 @@
 import flatMap = require('lodash.flatmap');
+import * as ts from 'typescript';
 import { Config } from 'stryker-api/config';
 import { Transpiler, TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
 import { File } from 'stryker-api/core';
-import { filterTypescriptFiles, getCompilerOptions, getProjectDirectory, isHeaderFile, guardTypescriptVersion, isTypescriptFile } from './helpers/tsHelpers';
+import { getTSConfig, getProjectDirectory, guardTypescriptVersion, isHeaderFile } from './helpers/tsHelpers';
 import TranspilingLanguageService from './transpiler/TranspilingLanguageService';
 import { setGlobalLogLevel } from 'log4js';
+import TranspileFilter from './transpiler/TranspileFilter';
 
 export default class TypescriptTranspiler implements Transpiler {
   private languageService: TranspilingLanguageService;
   private readonly config: Config;
   private readonly produceSourceMaps: boolean;
+  private readonly filter: TranspileFilter;
 
   constructor(options: TranspilerOptions) {
     guardTypescriptVersion();
     setGlobalLogLevel(options.config.logLevel);
     this.config = options.config;
     this.produceSourceMaps = options.produceSourceMaps;
+    this.filter = TranspileFilter.create(this.config);
   }
 
   transpile(files: File[]): Promise<TranspileResult> {
-    const typescriptFiles = filterTypescriptFiles(files)
-      .filter(file => file.transpiled);
-    if (!this.languageService) {
-      this.languageService = new TranspilingLanguageService(
-        getCompilerOptions(this.config), typescriptFiles, getProjectDirectory(this.config), this.produceSourceMaps);
+    const typescriptFiles = this.filter.filterIsIncluded(files);
+    this.writeFiles(typescriptFiles);
+    const error = this.languageService.getSemanticDiagnostics(typescriptFiles);
+    if (error.length) {
+      return Promise.resolve(this.createErrorResult(error));
     } else {
-      this.languageService.replace(typescriptFiles);
+      const resultFiles: File[] = this.transpileFiles(files);
+      return Promise.resolve(this.createSuccessResult(resultFiles));
     }
-    return Promise.resolve(this.transpileAndResult(typescriptFiles, files));
   }
 
-  private transpileAndResult(typescriptFiles: File[], allFiles: File[]) {
-    const error = this.languageService.getSemanticDiagnostics(typescriptFiles.map(file => file.name));
-    if (error.length) {
-      return this.createErrorResult(error);
+  private writeFiles(typescriptFiles: File[]) {
+    if (this.languageService) {
+      this.languageService.replace(typescriptFiles);
     } else {
-      // Keep original order of the files
-      let isSingleOutput = false;
-      const resultFiles: File[] = flatMap(allFiles, file => {
-        if (isHeaderFile(file)) {
-          // Header files are not compiled to output
-          return [];
-        } else if (file.transpiled && isTypescriptFile(file)) {
-          // File is a typescript file. Only emit if more output is expected.
-          if (!isSingleOutput) {
-            const emitOutput = this.languageService.emit(file);
-            isSingleOutput = emitOutput.singleResult;
-            return emitOutput.outputFiles;
-          } else {
-            return [];
-          }
-        } else {
-          // File is not a typescript file
-          return [file];
-        }
-      });
-      return this.createSuccessResult(resultFiles);
+      this.languageService = this.createLanguageService(typescriptFiles);
     }
+  }
+
+  private createLanguageService(typescriptFiles: File[]) {
+    const tsConfig = getTSConfig(this.config);
+    const compilerOptions: ts.CompilerOptions = (tsConfig && tsConfig.options) || {};
+    return new TranspilingLanguageService(
+      compilerOptions, typescriptFiles, getProjectDirectory(this.config), this.produceSourceMaps);
+  }
+
+  private transpileFiles(files: File[]) {
+    let isSingleOutput = false;
+    // Keep original order of the files using a flatmap.
+    return flatMap(files, file => {
+      if (!isHeaderFile(file.name) && this.filter.isIncluded(file.name)) {
+        // File is to be transpiled. Only emit if more output is expected.
+        if (isSingleOutput) {
+          return [];
+        } else {
+          const emitOutput = this.languageService.emit(file.name);
+          isSingleOutput = emitOutput.singleResult;
+          return emitOutput.outputFiles;
+        }
+      } else {
+        // File is not an included typescript file
+        return [file];
+      }
+    });
   }
 
   private createErrorResult(error: string): TranspileResult {

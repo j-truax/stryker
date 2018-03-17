@@ -38,9 +38,9 @@ export default class TypescriptMutator {
   ]) { }
 
   mutate(inputFiles: File[]): Mutant[] {
-    const compilerOptions = getTSConfig(this.config);
+    const tsConfig = getTSConfig(this.config);
     const mutants = flatMap(inputFiles, inputFile => {
-      const sourceFile = parseFile(inputFile, compilerOptions && compilerOptions.target);
+      const sourceFile = parseFile(inputFile, tsConfig && tsConfig.options && tsConfig.options.target);
       return this.mutateForNode(sourceFile, sourceFile);
     });
     return mutants;

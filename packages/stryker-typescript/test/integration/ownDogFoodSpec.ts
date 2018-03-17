@@ -6,6 +6,7 @@ import { File } from 'stryker-api/core';
 import TypescriptConfigEditor from '../../src/TypescriptConfigEditor';
 import TypescriptTranspiler from '../../src/TypescriptTranspiler';
 import { setGlobalLogLevel } from 'log4js';
+import { CONFIG_KEY } from '../../src/helpers/keys';
 
 describe('stryker-typescript', function () {
   this.timeout(20000);
@@ -21,7 +22,7 @@ describe('stryker-typescript', function () {
       tsconfigFile: path.resolve(__dirname, '..', '..', 'tsconfig.json'),
     });
     configEditor.edit(config);
-    inputFiles = config.files.map((file) => new File(file, fs.readFileSync(file as string, 'utf8')));
+    inputFiles = config[CONFIG_KEY].fileNames.map((fileName: string) => new File(fileName, fs.readFileSync(fileName, 'utf8')));
   });
 
   afterEach(() => {

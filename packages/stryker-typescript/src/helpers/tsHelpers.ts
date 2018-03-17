@@ -1,6 +1,6 @@
 import * as os from 'os';
 import { File } from 'stryker-api/core';
-import { CONFIG_KEY_OPTIONS, CONFIG_KEY_FILE } from './keys';
+import { CONFIG_KEY, CONFIG_KEY_FILE } from './keys';
 import { Config } from 'stryker-api/config';
 import * as ts from 'typescript';
 import * as path from 'path';
@@ -12,10 +12,6 @@ export function parseFile(file: File, target: ts.ScriptTarget | undefined) {
     file.textContent,
     target || ts.ScriptTarget.ES5,
     /*setParentNodes*/ true);
-}
-
-export function getTSConfig(strykerConfig: Config): ts.CompilerOptions | undefined {
-  return strykerConfig[CONFIG_KEY_OPTIONS];
 }
 
 /**
@@ -31,11 +27,11 @@ export function normalizeFileForTypescript(fileName: string) {
  * @param fileName The file name to be normalized
  */
 export function normalizeFileFromTypescript(fileName: string) {
-  return fileName.replace(/\//g, path.sep);
+  return path.normalize(fileName);
 }
 
-export function getCompilerOptions(config: Config) {
-  return config[CONFIG_KEY_OPTIONS];
+export function getTSConfig(config: Config): ts.ParsedCommandLine | undefined {
+  return config[CONFIG_KEY];
 }
 
 export function getProjectDirectory(config: Config) {
@@ -71,9 +67,8 @@ function tsExtensions() {
   }
 }
 
-
-export function isTypescriptFile(file: File) {
-  return tsExtensions().some(extension => file.name.endsWith(extension));
+export function isTypescriptFile(fileName: string) {
+  return tsExtensions().some(extension => fileName.endsWith(extension));
 }
 
 export function isJavaScriptFile(file: ts.OutputFile) {
@@ -87,20 +82,6 @@ export function isMapFile(file: ts.OutputFile) {
 /**
  * Determines whether or not given file is a typescript header file (*.d.ts)
  */
-export function isHeaderFile(file: File) {
-  return file.name.endsWith('.d.ts');
-}
-
-/**
- * Returns all the files that are considered typescript files (text files with *.ts or something like that)
- */
-export function filterTypescriptFiles(files: File[]) {
-  return files.filter(isTypescriptFile);
-}
-
-/**
- * Returns all items that are NOT undefined or null
- */
-export function filterNotEmpty<T>(input: (T | undefined | null)[]): T[] {
-  return input.filter(item => item !== void 0 && item !== null) as T[];
+export function isHeaderFile(fileName: string) {
+  return fileName.endsWith('.d.ts');
 }
