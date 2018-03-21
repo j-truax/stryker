@@ -11,7 +11,7 @@ import * as fileUtils from '../../src/utils/fileUtils';
 import currentLogMock from '../helpers/log4jsMock';
 import BroadcastReporter from '../../src/reporters/BroadcastReporter';
 import { Mock, mock } from '../helpers/producers';
-import { errorToString } from '../../src/utils/objectUtils';
+import { errorToString, normalizeWhiteSpaces } from '../../src/utils/objectUtils';
 
 const files = (...namesWithContent: [string, string][]): File[] =>
   namesWithContent.map((nameAndContent): File => new File(
@@ -66,9 +66,9 @@ describe('InputFileResolver', () => {
     childProcessExecStub.rejects(expectedError);
     return expect(new InputFileResolver([], undefined, reporter).resolve())
       .rejectedWith(`Cannot determine input files. Either specify a \`files\` array in your stryker configuration, or make sure "${process.cwd()
-      }" is located inside a git repository. Inner error: ${
+        }" is located inside a git repository. Inner error: ${
         errorToString(expectedError)
-      }`);
+        }`);
   });
 
   describe('with mutate file expressions', () => {
@@ -146,6 +146,42 @@ describe('InputFileResolver', () => {
     it('should retain original glob order', async () => {
       const result = await sut.resolve();
       expect(result.files.map(m => m.name.substr(m.name.length - 5))).to.deep.equal(['file1', 'file2']);
+    });
+  });
+
+  describe('with file expressions in the old `InputFileDescriptor` syntax', () => {
+    let patternFile1: any;
+    let patternFile3: any;
+
+    beforeEach(() => {
+      patternFile1 = { pattern: 'file1' };
+      patternFile3 = { pattern: 'file3' };
+
+      sut = new InputFileResolver([], [patternFile1, 'file2', patternFile3], reporter);
+    });
+
+    it('it should log a warning', async () => {
+      
+      await sut.resolve();
+      const inputFileDescriptors = JSON.stringify([patternFile1, patternFile3]);
+      const patternNames = JSON.stringify([patternFile1.pattern, patternFile3.pattern]);
+      expect(log.warn).calledWith(normalizeWhiteSpaces(`
+      DEPRECATED: Using the \`InputFileDescriptor\` syntax to 
+      select files is no longer supported. We'll assume: ${inputFileDescriptors} can be migrated 
+      to ${patternNames} for this mutation run. Please move any files to mutate into the \`mutate\` 
+      array (top level stryker option).
+      
+      You can fix this warning in 2 ways:
+      1) If your project is under git version control, you can remove the "files" patterns all together. 
+      Stryker can figure it out for you.
+      2) If your project is not under git version control or you need ignored files in your sandbox, you can replace the 
+      \`InputFileDescriptor\` syntax with strings (as done for this test run).`));
+    });
+
+    it('should resolve the patterns as normal files', async () => {
+      const result = await sut.resolve();
+      const actualFileNames = result.files.map(m => m.name);
+      expect(actualFileNames).to.deep.equal(['/file1.js', '/file2.js', '/file3.js'].map(_ => path.resolve(_)));
     });
   });
 

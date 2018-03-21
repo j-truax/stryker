@@ -74,3 +74,7 @@ export function setExitCode(n: number) {
 export function base64Decode(base64EncodedString: string) {
   return Buffer.from(base64EncodedString, 'base64').toString('utf8');
 }
+
+export function normalizeWhiteSpaces(str: string) {
+  return str.replace(/\s+/g, ' ').trim();
+}

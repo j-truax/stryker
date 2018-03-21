@@ -15,7 +15,11 @@
         "${workspaceRoot}/test/helpers/**/*.js",
         "${workspaceRoot}/test/unit/**/*.js"
       ],
-      "internalConsoleOptions": "openOnSessionStart"
+      "internalConsoleOptions": "openOnSessionStart",
+      "outFiles": [
+        "${workspaceRoot}/test/**/*.js",
+        "${workspaceRoot}/src/**/*.js"
+      ]
     }, {
       "type": "node",
       "request": "launch",
@@ -30,7 +34,11 @@
         "${workspaceRoot}/test/helpers/**/*.js",
         "${workspaceRoot}/test/integration/**/*.js"
       ],
-      "internalConsoleOptions": "openOnSessionStart"
+      "internalConsoleOptions": "openOnSessionStart",
+      "outFiles": [
+        "${workspaceRoot}/test/**/*.js",
+        "${workspaceRoot}/src/**/*.js"
+      ]
     },
     {
       "name": "Run stryker example",
@@ -51,7 +59,11 @@
         "NODE_ENV": "development"
       },
       "console": "integratedTerminal",
-      "sourceMaps": true
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceRoot}/test/**/*.js",
+        "${workspaceRoot}/src/**/*.js"
+      ]
     },
     {
       "name": "Run own dog food",
@@ -74,7 +86,11 @@
       },
       "console": "internalConsole",
       "sourceMaps": true,
-      "outDir": "${workspaceRoot}"
+      "outDir": "${workspaceRoot}",
+      "outFiles": [
+        "${workspaceRoot}/test/**/*.js",
+        "${workspaceRoot}/src/**/*.js"
+      ]
     },
     {
       "name": "Run stryker help",
@@ -98,7 +114,11 @@
       },
       "console": "internalConsole",
       "sourceMaps": true,
-      "outDir": "${workspaceRoot}"
+      "outDir": "${workspaceRoot}",
+      "outFiles": [
+        "${workspaceRoot}/test/**/*.js",
+        "${workspaceRoot}/src/**/*.js"
+      ]
     }
   ]
 }

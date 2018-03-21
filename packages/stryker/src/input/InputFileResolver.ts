@@ -8,6 +8,7 @@ import StrictReporter from '../reporters/StrictReporter';
 import { SourceFile } from 'stryker-api/report';
 import StrykerError from '../utils/StrykerError';
 import InputFileCollection from './InputFileCollection';
+import { normalizeWhiteSpaces } from '../utils/objectUtils';
 
 function toReportSourceFile(file: File): SourceFile {
   return {
@@ -78,7 +79,30 @@ export default class InputFileResolver {
 }
 
 class PatternResolver {
-
+  static normalize(inputFileExpressions: (string | { pattern: string })[]): string[] {
+    const inputFileDescriptorObjects: { pattern: string }[] = [];
+    const globExpressions = inputFileExpressions.map(expression => {
+      if (typeof expression === 'string') {
+        return expression;
+      } else {
+        inputFileDescriptorObjects.push(expression);
+        return expression.pattern;
+      }
+    });
+    if (inputFileDescriptorObjects.length) {
+      new PatternResolver('').log.warn(normalizeWhiteSpaces(`
+      DEPRECATED: Using the \`InputFileDescriptor\` syntax to 
+      select files is no longer supported. We'll assume: ${JSON.stringify(inputFileDescriptorObjects)} can be migrated 
+      to ${JSON.stringify(inputFileDescriptorObjects.map(_ => _.pattern))} for this mutation run.
+      Please move any files to mutate into the \`mutate\` array (top level stryker option).
+      You can fix this warning in 2 ways:
+      1) If your project is under git version control, you can remove the "files" patterns all together. 
+      Stryker can figure it out for you.
+      2) If your project is not under git version control or you need ignored files in your sandbox, you can replace the 
+      \`InputFileDescriptor\` syntax with strings (as done for this test run).`));
+    }
+    return globExpressions;
+  }
   private readonly log = getLogger(InputFileResolver.name);
   private ignore = false;
   private globExpression: string;
@@ -125,7 +149,7 @@ class PatternResolver {
   }
 
   static parse(inputFileExpressions: string[]): PatternResolver {
-    const expressions = inputFileExpressions.map(i => i); // work on a copy as we're changing the array state
+    const expressions = this.normalize(inputFileExpressions);
     let current = PatternResolver.empty();
     let expression = expressions.shift();
     while (expression) {
