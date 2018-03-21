@@ -1,4 +1,5 @@
 import { fork, ChildProcess } from 'child_process';
+import { File } from 'stryker-api/core';
 import { WorkerMessage, WorkerMessageKind, ParentMessage, autoStart } from './messageProtocol';
 import { serialize, deserialize } from '../utils/objectUtils';
 import Task from '../utils/Task';
@@ -72,7 +73,7 @@ export default class ChildProcessProxy<T> {
 
   private listenToWorkerMessages() {
     this.worker.on('message', (serializedMessage: string) => {
-      const message: ParentMessage = deserialize(serializedMessage);
+      const message: ParentMessage = deserialize(serializedMessage, [File]);
       if (message === 'init_done') {
         this.initTask.resolve(undefined);
       } else {

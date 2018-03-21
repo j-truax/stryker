@@ -1,4 +1,4 @@
-
+import { File } from 'stryker-api/core';
 
 export default class Echo {
 
@@ -17,4 +17,11 @@ export default class Echo {
     });
   }
 
+  echoFile(file: File) {
+    return file.textContent;
+  }
+
+  readFile() {
+    return new File('foobar.txt', 'hello foobar');
+  }
 }

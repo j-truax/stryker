@@ -1,6 +1,7 @@
+import { setGlobalLogLevel, getLogger } from 'log4js';
+import { File } from 'stryker-api/core';
 import { serialize, deserialize } from '../utils/objectUtils';
 import { WorkerMessage, WorkerMessageKind, ParentMessage, autoStart } from './messageProtocol';
-import { setGlobalLogLevel, getLogger } from 'log4js';
 import PluginLoader from '../PluginLoader';
 
 export default class ChildProcessProxyWorker {
@@ -22,7 +23,7 @@ export default class ChildProcessProxyWorker {
   private listenToParent() {
 
     const handler = (serializedMessage: string) => {
-      const message = deserialize<WorkerMessage>(serializedMessage);
+      const message = deserialize<WorkerMessage>(serializedMessage, [File]);
       switch (message.kind) {
         case WorkerMessageKind.Init:
           setGlobalLogLevel(message.logLevel);
