@@ -108,7 +108,14 @@ export default class Stryker {
   }
 
   private freezeConfig() {
-    freezeRecursively(this.config);
+    // A config class instance is not serializable using surrial.
+    // This is a temporary work around
+    // See https://github.com/stryker-mutator/stryker/issues/365
+    const config: Config = {} as any;
+    for (let prop in this.config) {
+      config[prop] = this.config[prop];
+    }
+    this.config = freezeRecursively(config);
     if (this.log.isDebugEnabled()) {
       this.log.debug(`Using config: ${JSON.stringify(this.config)}`);
     }
