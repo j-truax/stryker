@@ -3,7 +3,7 @@ import ConfigLoader, * as configLoaderModule from '../../src/compiler/ConfigLoad
 import WebpackCompiler, * as webpackCompilerModule from '../../src/compiler/WebpackCompiler';
 import { createTextFile, Mock, createMockInstance, createStrykerWebpackConfig } from '../helpers/producers';
 import { Config } from 'stryker-api/config';
-import { TextFile } from 'stryker-api/core';
+import { File } from 'stryker-api/core';
 import { expect } from 'chai';
 import { Configuration } from 'webpack';
 import * as log4js from 'log4js';
@@ -16,7 +16,7 @@ describe('WebpackTranspiler', () => {
   let configLoaderStub: Mock<ConfigLoader>;
   let webpackCompilerStub: Mock<WebpackCompiler>;
 
-  let exampleBundleFile: TextFile = createTextFile('bundle.js');
+  let exampleBundleFile: File = createTextFile('bundle.js');
   let webpackConfig: Configuration;
 
   beforeEach(() => {

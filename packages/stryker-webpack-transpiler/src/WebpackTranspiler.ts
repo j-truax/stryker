@@ -18,7 +18,7 @@ export default class WebpackTranspiler implements Transpiler {
     this.config = this.getStrykerWebpackConfig(options.config.webpack);
   }
 
-  public async transpile(files: Array<File>): Promise<TranspileResult> {
+  public async transpile(files: File[]): Promise<TranspileResult> {
     try {
       if (!this.webpackCompiler) {
         // Initialize the webpack compiler with the current directory (process.cwd)
