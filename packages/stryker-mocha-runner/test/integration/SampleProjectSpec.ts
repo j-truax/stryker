@@ -42,7 +42,7 @@ describe('Running a sample project', function () {
     });
 
     it('should report completed tests', async () => {
-      const runResult = await sut.run({ timeout: 0 });
+      const runResult = await sut.run({});
       expect(countSucceeded(runResult)).to.be.eq(5, 'Succeeded tests did not match');
       expect(countFailed(runResult)).to.be.eq(0, 'Failed tests did not match');
       runResult.tests.forEach(t => expect(t.timeSpentMs).to.be.greaterThan(-1).and.to.be.lessThan(1000));
@@ -51,8 +51,8 @@ describe('Running a sample project', function () {
     });
 
     it('should be able to run 2 times in a row', async () => {
-      await sut.run({ timeout: 0 });
-      const runResult = await sut.run({ timeout: 0 });
+      await sut.run({});
+      const runResult = await sut.run({});
       expect(countSucceeded(runResult)).to.be.eq(5);
     });
   });
@@ -75,7 +75,7 @@ describe('Running a sample project', function () {
     });
 
     it('should report completed tests without errors', async () => {
-      const runResult = await sut.run({ timeout: 0 });
+      const runResult = await sut.run({});
       expect(runResult.status).to.be.eq(RunStatus.Complete, 'Test result did not match');
     });
   });
@@ -97,7 +97,7 @@ describe('Running a sample project', function () {
     });
 
     it('should only report the first failure', async () => {
-      const runResult = await sut.run({ timeout: 0 });
+      const runResult = await sut.run({});
       expect(countFailed(runResult)).to.be.eq(1);
     });
   });
@@ -118,7 +118,7 @@ describe('Running a sample project', function () {
     });
 
     it('should report no completed tests', async () => {
-      const runResult = await sut.run({ timeout: 0 });
+      const runResult = await sut.run({});
       expect(countSucceeded(runResult)).to.be.eq(0, 'Succeeded tests did not match');
       expect(countFailed(runResult)).to.be.eq(0, 'Failed tests did not match');
       runResult.tests.forEach(t => expect(t.timeSpentMs).to.be.greaterThan(-1).and.to.be.lessThan(1000));

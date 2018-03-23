@@ -18,7 +18,7 @@ describe('QUnit sample', function () {
       strykerOptions: { mochaOptions }
     }));
     await sut.init();
-    const actualResult = await sut.run({ timeout: 0 });
+    const actualResult = await sut.run({});
     expect(actualResult.status).eq(RunStatus.Complete);
     expect(actualResult.tests.map(t => t.name)).deep.eq([
       'Math should be able to add two numbers',
@@ -41,7 +41,7 @@ describe('QUnit sample', function () {
       }
     });
     await sut.init();
-    const actualResult = await sut.run({ timeout: 0 });
+    const actualResult = await sut.run({});
     expect(actualResult.status).eq(RunStatus.Complete);
     expect(actualResult.tests).lengthOf(0);
   });

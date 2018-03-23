@@ -1,5 +1,5 @@
 import { getLogger, setGlobalLogLevel } from 'log4js';
-import { TestRunner, RunResult, RunStatus, RunnerOptions, RunOptions } from 'stryker-api/test_runner';
+import { TestRunner, RunResult, RunStatus, RunnerOptions } from 'stryker-api/test_runner';
 import LibWrapper from './LibWrapper';
 import StrykerMochaReporter from './StrykerMochaReporter';
 import MochaRunnerOptions, { mochaOptionsKey } from './MochaRunnerOptions';
@@ -31,13 +31,13 @@ export default class MochaTestRunner implements TestRunner {
       });
   }
 
-  run(options: RunOptions): Promise<RunResult> {
+  run({ testHooks }: { testHooks?: string }): Promise<RunResult> {
     return new Promise<RunResult>((resolve, reject) => {
       try {
         const mocha = new LibWrapper.Mocha({ reporter: StrykerMochaReporter as any, bail: true });
         const requireCacheRecorder = new RequireCacheRecorder();
-        if (options.testHooks) {
-          evalGlobal(options.testHooks);
+        if (testHooks) {
+          evalGlobal(testHooks);
         }
         this.addFiles(mocha);
         this.configure(mocha);

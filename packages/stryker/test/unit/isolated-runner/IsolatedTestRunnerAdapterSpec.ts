@@ -70,7 +70,7 @@ describe('IsolatedTestRunnerAdapter', () => {
 
       it(' "initDone"', () => {
         arrangeAct();
-        receiveMessage({ kind: 'initDone' });
+        receiveMessage({ kind: 'initDone', errorMessage: null });
         return expect(initPromise).to.eventually.eq(undefined);
       });
 

@@ -56,6 +56,17 @@ class ErroredTestRunner extends EventEmitter implements TestRunner {
   }
 }
 
+class RejectInitRunner implements TestRunner {
+
+  init() {
+    return Promise.reject(new Error('Init was rejected'));
+  }
+
+  run(options: RunOptions): Promise<RunResult> {
+    throw new Error();
+  }
+}
+
 class NeverResolvedTestRunner extends EventEmitter implements TestRunner {
   run(options: RunOptions) {
     return new Promise<RunResult>(res => { });
@@ -108,7 +119,7 @@ class AsyncronousPromiseRejectionHandlerTestRunner extends EventEmitter implemen
   }
 
   run(options: RunOptions) {
-    this.promise.catch(() => {});
+    this.promise.catch(() => { });
     return Promise.resolve({ status: RunStatus.Complete, tests: [] });
   }
 }
@@ -122,3 +133,4 @@ TestRunnerFactory.instance().register('direct-resolved', DirectResolvedTestRunne
 TestRunnerFactory.instance().register('coverage-reporting', CoverageReportingTestRunner);
 TestRunnerFactory.instance().register('time-bomb', TimeBombTestRunner);
 TestRunnerFactory.instance().register('async-promise-rejection-handler', AsyncronousPromiseRejectionHandlerTestRunner);
+TestRunnerFactory.instance().register('reject-init', RejectInitRunner);

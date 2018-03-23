@@ -112,7 +112,7 @@ describe('MochaTestRunner', () => {
     sut = new MochaTestRunner(runnerOptions());
     mocha.run.throwsException('Error');
     await sut.init();
-    await sut.run({ timeout: 0 });
+    await sut.run({});
     expect(requireCacheRecorderMock.purge).called;
   });
 

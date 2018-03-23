@@ -52,7 +52,7 @@ describe('Integration with stryker-mocha-framework', () => {
   it('should be able to select only test 0 and 3 to run', async () => {
     const testHooks = wrapInClosure(testFramework.filter([test0, test3]));
     await sut.init();
-    const result = await sut.run({ timeout: 0, testHooks });
+    const result = await sut.run({ testHooks });
     expect(result.tests.map(test => ({ name: test.name, status: test.status }))).deep.eq([{
       name: 'MyMath should be able to add two numbers',
       status: TestStatus.Success

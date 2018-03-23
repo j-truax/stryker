@@ -122,6 +122,17 @@ describe('ResilientTestRunnerFactory', function () {
     after(() => sut.dispose());
   });
 
+  describe('when test runner behind rejects init promise', () => {
+    before(() => {
+      sut = ResilientTestRunnerFactory.create('reject-init', options);
+    });
+    after(() => sut.dispose());
+
+    it('should pass along the rejection', () => {
+      return expect(sut.init()).rejectedWith('Init was rejected');
+    });
+  });
+
   describe('when test runner verifies the current working folder', () => {
     before(() => {
       sut = ResilientTestRunnerFactory.create('verify-working-folder', options);
@@ -153,7 +164,7 @@ describe('ResilientTestRunnerFactory', function () {
 
   describe('when test runner handles promise rejections asynchronously', () => {
     before(() => sut = ResilientTestRunnerFactory.create('async-promise-rejection-handler', options));
-    
+
     it('should be logging the unhandled rejection errors', async () => {
       await sut.init();
       await sut.run({ timeout: 2000 });
@@ -161,6 +172,6 @@ describe('ResilientTestRunnerFactory', function () {
     });
 
     after(() => sut.dispose());
-   
+
   });
 }); 
