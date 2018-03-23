@@ -8,7 +8,7 @@ import StrictReporter from '../reporters/StrictReporter';
 import { SourceFile } from 'stryker-api/report';
 import StrykerError from '../utils/StrykerError';
 import InputFileCollection from './InputFileCollection';
-import { normalizeWhiteSpaces } from '../utils/objectUtils';
+import { normalizeWhiteSpaces, filterEmpty, isErrnoException } from '../utils/objectUtils';
 
 function toReportSourceFile(file: File): SourceFile {
   return {
@@ -66,14 +66,22 @@ export default class InputFileResolver {
   }
 
   private readFiles(files: string[]): Promise<File[]> {
-    return Promise.all(files.map(fileName => this.readFile(fileName)));
+    return Promise.all(files.map(fileName => this.readFile(fileName)))
+      .then(filterEmpty);
   }
 
-  private readFile(fileName: string): Promise<File> {
+  private readFile(fileName: string): Promise<File | null> {
     return fs.readFile(fileName).then(content => new File(fileName, content))
       .then(file => {
         this.reportSourceFilesRead(file);
         return file;
+      }).catch(error => {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
+          return null; // file is deleted. This can be a valid result of the git command
+        } else {
+          // Rethrow
+          throw error;
+        }
       });
   }
 }

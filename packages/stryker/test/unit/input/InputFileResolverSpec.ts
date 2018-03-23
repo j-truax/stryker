@@ -5,13 +5,13 @@ import * as childProcess from 'mz/child_process';
 import { Logger } from 'log4js';
 import { File } from 'stryker-api/core';
 import { SourceFile } from 'stryker-api/report';
-import InputFileResolver from '../../src/input/InputFileResolver';
+import InputFileResolver from '../../../src/input/InputFileResolver';
 import * as sinon from 'sinon';
-import * as fileUtils from '../../src/utils/fileUtils';
-import currentLogMock from '../helpers/log4jsMock';
-import BroadcastReporter from '../../src/reporters/BroadcastReporter';
-import { Mock, mock } from '../helpers/producers';
-import { errorToString, normalizeWhiteSpaces } from '../../src/utils/objectUtils';
+import * as fileUtils from '../../../src/utils/fileUtils';
+import currentLogMock from '../../helpers/log4jsMock';
+import BroadcastReporter from '../../../src/reporters/BroadcastReporter';
+import { Mock, mock } from '../../helpers/producers';
+import { errorToString, normalizeWhiteSpaces } from '../../../src/utils/objectUtils';
 
 const files = (...namesWithContent: [string, string][]): File[] =>
   namesWithContent.map((nameAndContent): File => new File(
@@ -25,12 +25,13 @@ describe('InputFileResolver', () => {
   let sut: InputFileResolver;
   let reporter: Mock<BroadcastReporter>;
   let childProcessExecStub: sinon.SinonStub;
+  let readFileStub: sinon.SinonStub;
 
   beforeEach(() => {
     log = currentLogMock();
     reporter = mock(BroadcastReporter);
     globStub = sandbox.stub(fileUtils, 'glob');
-    sandbox.stub(fs, 'readFile')
+    readFileStub = sandbox.stub(fs, 'readFile')
       .withArgs(sinon.match.string).resolves(new Buffer(0)) // fallback
       .withArgs(sinon.match.string).resolves(new Buffer(0)) // fallback
       .withArgs(sinon.match('file1')).resolves(Buffer.from('file 1 content'))
@@ -69,6 +70,18 @@ describe('InputFileResolver', () => {
         }" is located inside a git repository. Inner error: ${
         errorToString(expectedError)
         }`);
+  });
+
+  it('should be able to handled deleted files reported by `git ls-files`', async () => {
+    sut = new InputFileResolver([], undefined, reporter);
+    childProcessExecStub.resolves([Buffer.from(`
+      deleted/file.js
+    `)]);
+    const fileNotFoundError: NodeJS.ErrnoException = new Error('');
+    fileNotFoundError.code = 'ENOENT';
+    readFileStub.withArgs('deleted/file.js').rejects(fileNotFoundError);
+    const result = await sut.resolve();
+    expect(result.files).lengthOf(0);
   });
 
   describe('with mutate file expressions', () => {
@@ -161,7 +174,7 @@ describe('InputFileResolver', () => {
     });
 
     it('it should log a warning', async () => {
-      
+
       await sut.resolve();
       const inputFileDescriptors = JSON.stringify([patternFile1, patternFile3]);
       const patternNames = JSON.stringify([patternFile1.pattern, patternFile3.pattern]);
