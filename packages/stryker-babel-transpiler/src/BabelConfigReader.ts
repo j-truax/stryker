@@ -20,8 +20,7 @@ export default class BabelConfigReader {
       this.log.info(`Reading .babelrc file from path "${babelrcPath}"`);
       if (fs.existsSync(babelrcPath)) {
         try {
-          const configFileContent = fs.readFileSync(babelrcPath, 'utf8');
-          const config: babel.TransformOptions = JSON.parse(configFileContent);
+          const config: babel.TransformOptions = JSON.parse(fs.readFileSync(babelrcPath, 'utf8'));
           return config;
         } catch (error) {
           this.log.error(`Error while reading .babelrc file: ${error}`);

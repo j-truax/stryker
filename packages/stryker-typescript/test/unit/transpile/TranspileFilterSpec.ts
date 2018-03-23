@@ -2,8 +2,6 @@ import { expect } from 'chai';
 import * as path from 'path';
 import { Config } from 'stryker-api/config';
 import TranspileFilter, { DefaultFilter, TSConfigFilter } from '../../../src/transpiler/TranspileFilter';
-import { File } from 'stryker-api/core';
-import { serialize } from 'surrial';
 
 describe('TranspileFilter', () => {
 
@@ -17,21 +15,6 @@ describe('TranspileFilter', () => {
       const config = new Config();
       config['tsconfig'] = { fileNames: [] };
       expect(TranspileFilter.create(config)).instanceof(TSConfigFilter);
-    });
-  });
-
-  describe('filterIsIncluded', () => {
-    it('should correctly filter files', () => {
-      class FoobarFilter extends TranspileFilter {
-        public isIncluded(fileName: string): boolean {
-          return fileName === 'foo' || fileName === 'bar';
-        }
-      }
-      const foo = new File('foo', 'foo');
-      const bar = new File('bar', 'bar');
-      const baz = new File('baz', 'baz');
-      const output = new FoobarFilter().filterIsIncluded([foo, baz, bar]);
-      expect(serialize(output)).eq(serialize([foo, bar]));
     });
   });
 

@@ -34,7 +34,6 @@ export default class Sandbox {
     this.log.debug('Creating a sandbox for files in %s', this.workingFolder);
     this.files = files.slice(); // Create a copy
     if (testFramework) {
-      this.testHooksFile = path.resolve(TEST_HOOKS_FILE_NAME);
       this.files.unshift(new File(this.testHooksFile, ''));
     }
   }
@@ -88,8 +87,7 @@ export default class Sandbox {
   }
 
   private fillFile(file: File): Promise<void> {
-    const cwd = process.cwd();
-    const relativePath = path.relative(cwd, file.name);
+    const relativePath = path.relative(process.cwd(), file.name);
     const folderName = path.join(this.workingFolder, path.dirname(relativePath));
     mkdirp.sync(folderName);
     const targetFile = path.join(folderName, path.basename(relativePath));

@@ -160,10 +160,8 @@ describe('TypescriptTranspiler', () => {
 
   function arrangeIncludedFiles(files?: File[]) {
     if (files) {
-      transpileFilterMock.filterIsIncluded.returns(files);
       transpileFilterMock.isIncluded.callsFake((fileName: string) => files.some(file => file.name === fileName));
     } else {
-      transpileFilterMock.filterIsIncluded.returnsArg(0);
       transpileFilterMock.isIncluded.returns(true);
     }
   }

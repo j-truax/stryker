@@ -23,8 +23,12 @@ export default class TypescriptTranspiler implements Transpiler {
   }
 
   transpile(files: File[]): Promise<TranspileResult> {
-    const typescriptFiles = this.filter.filterIsIncluded(files);
-    this.writeFiles(typescriptFiles);
+    const typescriptFiles = this.filterIsIncluded(files);
+    if (this.languageService) {
+      this.languageService.replace(typescriptFiles);
+    } else {
+      this.languageService = this.createLanguageService(typescriptFiles);
+    }
     const error = this.languageService.getSemanticDiagnostics(typescriptFiles);
     if (error.length) {
       return Promise.resolve(this.createErrorResult(error));
@@ -34,12 +38,8 @@ export default class TypescriptTranspiler implements Transpiler {
     }
   }
 
-  private writeFiles(typescriptFiles: File[]) {
-    if (this.languageService) {
-      this.languageService.replace(typescriptFiles);
-    } else {
-      this.languageService = this.createLanguageService(typescriptFiles);
-    }
+  private filterIsIncluded(files: File[]): File[] {
+    return files.filter(file => this.filter.isIncluded(file.name));
   }
 
   private createLanguageService(typescriptFiles: File[]) {

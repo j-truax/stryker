@@ -1,4 +1,3 @@
-import { File } from 'stryker-api/core';
 import { Config } from 'stryker-api/config';
 import { normalizeFileFromTypescript, isTypescriptFile, getTSConfig } from '../helpers/tsHelpers';
 
@@ -10,10 +9,6 @@ import { normalizeFileFromTypescript, isTypescriptFile, getTSConfig } from '../h
  */
 export default abstract class TranspileFilter {
   public abstract isIncluded(fileName: string): boolean;
-
-  public filterIsIncluded(files: File[]) {
-    return files.filter(file => this.isIncluded(file.name));
-  }
 
   static create(config: Config): TranspileFilter {
     const parsedCommandLine = getTSConfig(config);

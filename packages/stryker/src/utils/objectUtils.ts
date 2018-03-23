@@ -75,6 +75,10 @@ export function base64Decode(base64EncodedString: string) {
   return Buffer.from(base64EncodedString, 'base64').toString('utf8');
 }
 
+/**
+ * Consolidates multiple consecutive white spaces into a single space.
+ * @param str The string to be normalized
+ */
 export function normalizeWhiteSpaces(str: string) {
   return str.replace(/\s+/g, ' ').trim();
 }

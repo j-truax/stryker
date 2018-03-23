@@ -10,8 +10,7 @@ export function requireModule(name: string): any {
  */
 export function touchSync(fileName: string) {
   try {
-    const handle = fs.openSync(fileName, 'wx');
-    fs.closeSync(handle);
+    fs.closeSync(fs.openSync(fileName, 'w'));
   } catch {
 
   }
