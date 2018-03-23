@@ -2,12 +2,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Config } from 'stryker-api/config';
 import { CONFIG_KEY_FILE, CONFIG_KEY_OPTIONS } from './helpers/keys';
-import { getLogger } from 'log4js';
+import { getLogger, setGlobalLogLevel } from 'log4js';
 
 export default class BabelConfigReader {
   private readonly log = getLogger(BabelConfigReader.name);
 
   public readConfig(config: Config): babel.TransformOptions {
+    setGlobalLogLevel(config.logLevel);
     const babelConfig: babel.TransformOptions = config[CONFIG_KEY_OPTIONS] || this.getConfigFile(config) || {};
     this.log.debug(`babel config is: ${JSON.stringify(babelConfig, null, 2)}`);
     return babelConfig;

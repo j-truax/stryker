@@ -5,6 +5,7 @@ import * as rawCoverageReporter from './RawCoverageReporter';
 import { KARMA_CONFIG } from './configKeys';
 import TestHooksMiddleware, { TEST_HOOKS_FILE_NAME } from './TestHooksMiddleware';
 import { touchSync } from './utils';
+import { setGlobalLogLevel } from 'log4js';
 
 export interface ConfigOptions extends karma.ConfigOptions {
   coverageReporter?: { type: string, dir?: string, subdir?: string };
@@ -56,6 +57,7 @@ export default class KarmaTestRunner implements TestRunner {
   private readonly testHooksMiddleware = new TestHooksMiddleware();
 
   constructor(private options: RunnerOptions) {
+    setGlobalLogLevel(options.strykerOptions.logLevel || 'info');
     let karmaConfig = this.configureTestRunner(options.strykerOptions[KARMA_CONFIG]);
     karmaConfig = this.configureCoverageIfEnabled(karmaConfig);
     karmaConfig = this.configureProperties(karmaConfig);

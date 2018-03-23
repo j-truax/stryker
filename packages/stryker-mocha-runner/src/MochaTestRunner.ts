@@ -1,4 +1,4 @@
-import { getLogger } from 'log4js';
+import { getLogger, setGlobalLogLevel } from 'log4js';
 import { TestRunner, RunResult, RunStatus, RunnerOptions, RunOptions } from 'stryker-api/test_runner';
 import LibWrapper from './LibWrapper';
 import StrykerMochaReporter from './StrykerMochaReporter';
@@ -14,6 +14,7 @@ export default class MochaTestRunner implements TestRunner {
   private mochaRunnerOptions: MochaRunnerOptions;
 
   constructor(runnerOptions: RunnerOptions) {
+    setGlobalLogLevel(runnerOptions.strykerOptions.logLevel || 'info');
     this.mochaRunnerOptions = runnerOptions.strykerOptions[mochaOptionsKey];
     this.additionalRequires();
   }
