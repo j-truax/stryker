@@ -142,7 +142,7 @@ describe('ResilientTestRunnerFactory', function () {
 
     it('should be able to recover from crash', () => {
       return sleep(101)
-        .then(() => sut.run({ timeout: 2000 })
+        .then(() => sut.run({ timeout: 4000 })
           .then(result => {
             expect(result.status).to.be.eq(RunStatus.Complete);
             expect(result.errorMessages).to.be.undefined;
