@@ -98,13 +98,6 @@ With `mutate` you configure the subset of files to use for mutation testing.
 Generally speaking, these should be your own source files.  
 This is optional, as you can choose to not mutate any files at all and perform a dry-run (running only your tests without mutating). 
 
-#### Mutator 
-**Config file:** `mutator: 'es5'`  
-**Default value:** `es5` (deprecated)  
-**Mandatory**: yes  
-**Description:**  
-With `mutator` you configure which mutator plugin you want to use. This defaults to es5, which is deprecated. Please use `'javascript'` for javascript (or JSX) projects, and choose `'typescript'` for typescript projects. Make sure the correct mutator plugin is installed (stryker-javascript-mutator or stryker-typescript).
-
 #### Test runner  
 **Command line:** `--testRunner karma`  
 **Config file:** `testRunner: 'karma'`  
@@ -152,7 +145,25 @@ test suite are tested during the mutation testing phase.
 Only the tests that cover a particular mutant are tested for each one. This requires your tests to be able to run independently of each other and in random order. 
 In addition to requiring your test runner to be able to report the code coverage back to Stryker, your chosen `testFramework` also needs to support running code
  before and after each test, as well as test filtering.  
- Currently, `stryker-mocha-runner` as well as `stryker-karma-runner` support this. However, `stryker-karma-runner` support is limited to using it with `Jasmine` and `Mocha`.
+ Currently, `stryker-mocha-runner` as well as `stryker-karma-runner` support this. However, `stryker-karma-runner` support is limited to using it with `Jasmine` as the test framework 
+ (`Mocha` is not yet supported).
+
+#### Mutator 
+**Command line:** `--mutator es5`  
+**Config file:** `mutator: { name: 'es5', excludedMutations: ['BooleanSubstitution', 'StringLiteral'] }`  
+**Default value:** `es5`  
+**Mandatory**: no  
+**Description:**  
+With `mutator` you configure which mutator plugin you want to use, and optionally, which mutation types to exclude from the test run.  
+The mutator plugin name defaults to `es5` if not specified. The list of excluded mutation types defaults to an empty array, meaning all mutation types will be included in the test.  
+The full list of mutation types varies slightly between mutators (for example, the `es5` mutator will not use the same mutation types as the `typescript` mutator). Mutation type names are case-sensitive, and can be found either in the source code or in a generated Stryker report.  
+ 
+When using the command line, only the mutator name as a string may be provided.  
+When using the config file, you can provide either a string representing the mutator name, or a `MutatorDescriptor` object, like so:  
+
+* `MutatorDescriptor` object: `{ name: 'name', excludedMutations: ['mutationType1', 'mutationType2', ...] }`:  
+   * The `name` property is mandatory and contains the name of the mutator plugin to use.  
+   * The `excludedMutations` property is mandatory and contains the types of mutations to exclude from the test run.  
 
 #### Transpilers  
 **Config file:** `transpilers: '['typescript']'`  
@@ -189,11 +200,11 @@ All `TRAVIS` environment variables are set by Travis for each build. However, yo
 #### Files in the sandbox
 **Command line:** `[--files|-f] src/**/*.js,a.js,test/**/*.js`  
 **Config file:** `files: ['src/**/*.js', '!src/**/index.js', 'test/**/*.js']`  
-**Default value:** All files known to git
+**Default value:** result of `git ls-files --others --exclude-standard --cached`
 **Mandatory**: No
 **Description:**  
 With `files` you can choose which files should be included in your test runner sandbox. 
-This is normally not needed as it defaults to all files known to git. 
+This is normally not needed as it defaults to all files not ignored by git. 
 Try it out yourself with this command: `git ls-files --others --exclude-standard --cached`.
 
 If you do need to override `files` (for example: when your project does not live in a git repository),
