@@ -1,7 +1,7 @@
 import { setGlobalLogLevel, getLogger } from 'log4js';
 import { File } from 'stryker-api/core';
-import { serialize, deserialize } from '../utils/objectUtils';
-import { WorkerMessage, WorkerMessageKind, ParentMessage, autoStart } from './messageProtocol';
+import { serialize, deserialize, errorToString } from '../utils/objectUtils';
+import { WorkerMessage, WorkerMessageKind, ParentMessage, autoStart, ParentMessageKind } from './messageProtocol';
 import PluginLoader from '../PluginLoader';
 
 export default class ChildProcessProxyWorker {
@@ -30,17 +30,24 @@ export default class ChildProcessProxyWorker {
           new PluginLoader(message.plugins).load();
           const RealSubjectClass = require(message.requirePath).default;
           this.realSubject = new RealSubjectClass(...message.constructorArgs);
-          this.send('init_done');
+          this.send({ kind: ParentMessageKind.Initialized });
           this.removeAnyAdditionalMessageListeners(handler);
           break;
         case WorkerMessageKind.Work:
-          const result = this.realSubject[message.methodName](...message.args);
-          Promise.resolve(result).then(result => {
-            this.send({
-              correlationId: message.correlationId,
-              result
+          new Promise(resolve => resolve(this.realSubject[message.methodName](...message.args)))
+            .then(result => {
+              this.send({
+                kind: ParentMessageKind.Result,
+                correlationId: message.correlationId,
+                result
+              });
+            }).catch(error => {
+              this.send({
+                kind: ParentMessageKind.Rejection,
+                error: errorToString(error),
+                correlationId: message.correlationId
+              });
             });
-          });
           this.removeAnyAdditionalMessageListeners(handler);
           break;
       }

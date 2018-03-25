@@ -1,7 +1,7 @@
 import flatMap = require('lodash.flatmap');
 import * as ts from 'typescript';
 import { Config } from 'stryker-api/config';
-import { Transpiler, TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
+import { Transpiler, TranspilerOptions } from 'stryker-api/transpile';
 import { File } from 'stryker-api/core';
 import { getTSConfig, getProjectDirectory, guardTypescriptVersion, isHeaderFile } from './helpers/tsHelpers';
 import TranspilingLanguageService from './transpiler/TranspilingLanguageService';
@@ -22,7 +22,7 @@ export default class TypescriptTranspiler implements Transpiler {
     this.filter = TranspileFilter.create(this.config);
   }
 
-  transpile(files: File[]): Promise<TranspileResult> {
+  transpile(files: ReadonlyArray<File>): Promise<ReadonlyArray<File>> {
     const typescriptFiles = this.filterIsIncluded(files);
     if (this.languageService) {
       this.languageService.replace(typescriptFiles);
@@ -31,25 +31,25 @@ export default class TypescriptTranspiler implements Transpiler {
     }
     const error = this.languageService.getSemanticDiagnostics(typescriptFiles);
     if (error.length) {
-      return Promise.resolve(this.createErrorResult(error));
+      return Promise.reject(new Error(error));
     } else {
       const resultFiles: File[] = this.transpileFiles(files);
-      return Promise.resolve(this.createSuccessResult(resultFiles));
+      return Promise.resolve(resultFiles);
     }
   }
 
-  private filterIsIncluded(files: File[]): File[] {
+  private filterIsIncluded(files: ReadonlyArray<File>): ReadonlyArray<File> {
     return files.filter(file => this.filter.isIncluded(file.name));
   }
 
-  private createLanguageService(typescriptFiles: File[]) {
+  private createLanguageService(typescriptFiles: ReadonlyArray<File>) {
     const tsConfig = getTSConfig(this.config);
     const compilerOptions: ts.CompilerOptions = (tsConfig && tsConfig.options) || {};
     return new TranspilingLanguageService(
       compilerOptions, typescriptFiles, getProjectDirectory(this.config), this.produceSourceMaps);
   }
 
-  private transpileFiles(files: File[]) {
+  private transpileFiles(files: ReadonlyArray<File>) {
     let isSingleOutput = false;
     // Keep original order of the files using a flatmap.
     return flatMap(files, file => {
@@ -67,19 +67,5 @@ export default class TypescriptTranspiler implements Transpiler {
         return [file];
       }
     });
-  }
-
-  private createErrorResult(error: string): TranspileResult {
-    return {
-      error,
-      outputFiles: []
-    };
-  }
-
-  private createSuccessResult(outputFiles: File[]): TranspileResult {
-    return {
-      error: null,
-      outputFiles
-    };
   }
 }

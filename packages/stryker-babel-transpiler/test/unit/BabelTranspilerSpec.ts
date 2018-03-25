@@ -62,7 +62,7 @@ describe('BabelTranspiler', () => {
 
     it('should call the babel transform function for js files', async () => {
       arrangeHappyFlow();
-      const transpileResult = await sut.transpile(files);
+      const actualResultFiles = await sut.transpile(files);
       files.forEach(file => {
         expect(transformStub).calledWith(file.textContent, {
           filename: file.name,
@@ -70,7 +70,7 @@ describe('BabelTranspiler', () => {
           someBabel: 'config'
         });
       });
-      expect(transpileResult.outputFiles).deep.eq(files.map(file => new File(file.name, 'code')));
+      expect(actualResultFiles).deep.eq(files.map(file => new File(file.name, 'code')));
     });
 
     it('should not allow a user to override the file name', async () => {
@@ -89,24 +89,21 @@ describe('BabelTranspiler', () => {
     it('should not transpile binary files', async () => {
       arrangeHappyFlow();
       const inputFile = new File('myBinaryFile.png', 'S�L!##���XLDDDDDDDD\K�');
-      const result = await sut.transpile([inputFile]);
-      expect(result.error).null;
-      expect(result.outputFiles[0]).eq(inputFile);
+      const actualResultFiles = await sut.transpile([inputFile]);
+      expect(actualResultFiles[0]).eq(inputFile);
       expect(transformStub).not.called;
     });
 
     it('should not transpile ignored files', async () => {
       arrangeHappyFlow({ ignored: true });
       const inputFiles = [new File('file.es6', 'pass through')];
-      const result = await sut.transpile(inputFiles);
-      expect(result.error).null;
-      expect(result.outputFiles).deep.eq(inputFiles);
+      const actualResultFiles = await sut.transpile(inputFiles);
+      expect(actualResultFiles).deep.eq(inputFiles);
     });
 
     it('should report an error if transpiled code was undefined', async () => {
       arrangeHappyFlow({ code: undefined });
-      const result = await sut.transpile([new File('f.js', '')]);
-      expect(result.error).contains('Could not transpile file "f.js". Babel transform function delivered \`undefined\`.');
+      return expect(sut.transpile([new File('f.js', '')])).rejectedWith('Could not transpile file "f.js". Babel transform function delivered \`undefined\`.');
     });
 
     it('should only call the transform function when the file extension is a known file extension', async () => {
@@ -118,13 +115,13 @@ describe('BabelTranspiler', () => {
         new File(`jsx.jsx`, 'jsx = true'),
         new File(`ignored.njs`, 'ignored')
       ];
-      const result = await sut.transpile(inputFiles);
+      const actualResultFiles = await sut.transpile(inputFiles);
       expect(transformStub).callCount(inputFiles.length - 1);
       expect(transformStub).calledWith('es6 = true');
       expect(transformStub).calledWith('js = true');
       expect(transformStub).calledWith('es = true');
       expect(transformStub).calledWith('jsx = true');
-      expect(result.outputFiles.map(file => file.name)).deep.eq([
+      expect(actualResultFiles.map(file => file.name)).deep.eq([
         'es6.js',
         'js.js',
         'es.js',
@@ -137,8 +134,7 @@ describe('BabelTranspiler', () => {
       const error = new Error('Syntax error');
       transformStub.throws(error);
       sut = new BabelTranspiler({ produceSourceMaps: false, config });
-      const transpileResult = await sut.transpile([new File('picture.js', 'S�L!##���XLDDDDDDDD\K�')]);
-      expect(transpileResult.error).to.deep.equal(`Error while transpiling "picture.js": ${error.stack}`);
+      return expect(sut.transpile([new File('picture.js', 'S�L!##���XLDDDDDDDD\K�')])).rejectedWith(`Error while transpiling "picture.js": ${error.stack}`);
     });
   });
 });

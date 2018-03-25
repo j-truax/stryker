@@ -35,4 +35,8 @@ describe('ChildProcessProxy', () => {
     expect(actual.textContent).eq('hello foobar');
     expect(actual.name).eq('foobar.txt');
   });
+
+  it('should be able to receive a promise rejection', () => {
+    return expect(sut.proxy.reject('Foobar error')).rejectedWith('Foobar error');
+  });
 });

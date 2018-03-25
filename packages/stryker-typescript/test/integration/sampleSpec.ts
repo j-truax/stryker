@@ -40,16 +40,13 @@ describe('Sample integration', function () {
 
   it('should be able to transpile source code', async () => {
     const transpiler = new TypescriptTranspiler({ config, produceSourceMaps: false });
-    const transpileResult = await transpiler.transpile(inputFiles);
-    expect(transpileResult.error).to.be.null;
-    const outputFiles = transpileResult.outputFiles;
+    const outputFiles = await transpiler.transpile(inputFiles);
     expect(outputFiles.length).to.eq(2);
   });
 
   it('should be able to produce source maps', async () => {
     const transpiler = new TypescriptTranspiler({ config, produceSourceMaps: true });
-    const transpileResult = await transpiler.transpile(inputFiles);
-    const outputFiles = transpileResult.outputFiles;
+    const outputFiles = await transpiler.transpile(inputFiles);
     expect(outputFiles).lengthOf(4);
     const mapFiles = outputFiles.filter(file => file.name.endsWith('.map'));
     expect(mapFiles).lengthOf(2);
@@ -68,12 +65,10 @@ describe('Sample integration', function () {
     const mathDotTS = inputFiles.filter(file => file.name.endsWith('math.ts'))[0];
     const [firstBinaryMutant, stringSubtractMutant] = mutants.filter(m => m.mutatorName === 'BinaryExpression');
     const correctResult = await transpiler.transpile([mutateFile(mathDotTS, firstBinaryMutant)]);
-    const errorResult = await transpiler.transpile([mutateFile(mathDotTS, stringSubtractMutant)]);
-    expect(correctResult.error).null;
-    expect(correctResult.outputFiles).lengthOf(1);
-    expect(path.resolve(correctResult.outputFiles[0].name)).eq(path.resolve(path.dirname(mathDotTS.name), 'math.js'));
-    expect(errorResult.error).matches(/error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number' or an enum type/);
-    expect(errorResult.outputFiles).lengthOf(0);
+    await expect(transpiler.transpile([mutateFile(mathDotTS, stringSubtractMutant)]))
+      .rejectedWith('error TS2362: The left-hand side of an arithmetic operation must be of type \'any\', \'number\' or an enum type');
+    expect(correctResult).lengthOf(1);
+    expect(path.resolve(correctResult[0].name)).eq(path.resolve(path.dirname(mathDotTS.name), 'math.js'));
   });
 
   function mutateFile(file: File, mutant: Mutant): File {

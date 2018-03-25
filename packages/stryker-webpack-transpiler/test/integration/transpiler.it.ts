@@ -28,9 +28,7 @@ describe('Webpack transpiler', function () {
     const files = readFiles();
 
     const transpiledFiles = await sut.transpile(files);
-
-    expect(transpiledFiles.error).null;
-    expect(transpiledFiles.outputFiles).lengthOf(1);
+    expect(transpiledFiles).lengthOf(1);
   });
 
   it('should be able to transpile "zeroConfig" sample without a Webpack config file', async () => {
@@ -39,9 +37,7 @@ describe('Webpack transpiler', function () {
     const files = readFiles();
 
     const transpiledFiles = await sut.transpile(files);
-
-    expect(transpiledFiles.error).null;
-    expect(transpiledFiles.outputFiles).lengthOf(1);
+    expect(transpiledFiles).lengthOf(1);
   });
 });
 

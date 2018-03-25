@@ -1,4 +1,3 @@
-import TranspileResult from './TranspileResult';
 import { File } from '../../core';
 
 /**
@@ -29,8 +28,8 @@ export default interface Transpiler {
    *      call 4: [foo.es6, bar.es6 (mutated)]
    *      call 5: [bar.es6 (mutated)]
    * 
-   * @returns an error message (if transpiling failed) or the output files to be used in the next transpiler
+   * @returns an rejection (if transpiling failed) or the output files to be used as input for the next transpiler
    */
-  transpile(files: ReadonlyArray<File>): Promise<TranspileResult>;
+  transpile(files: ReadonlyArray<File>): Promise<ReadonlyArray<File>>;
 
 }

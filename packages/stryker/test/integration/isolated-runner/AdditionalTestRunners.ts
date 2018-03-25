@@ -103,7 +103,7 @@ class VerifyWorkingFolderTestRunner extends EventEmitter implements TestRunner {
   runResult: RunResult = { status: RunStatus.Complete, tests: [] };
 
   run(options: RunOptions) {
-    if (process.cwd() === __dirname) {
+    if (process.cwd().toLowerCase() === __dirname.toLowerCase()) {
       return Promise.resolve(this.runResult);
     } else {
       return Promise.reject(new Error(`Expected ${process.cwd()} to be ${__dirname}`));

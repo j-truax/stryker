@@ -2,7 +2,7 @@ import { EOL } from 'os';
 import { RunStatus, RunResult, TestResult, TestStatus } from 'stryker-api/test_runner';
 import { TestFramework } from 'stryker-api/test_framework';
 import { Config } from 'stryker-api/config';
-import { TranspileResult, TranspilerOptions, Transpiler } from 'stryker-api/transpile';
+import { TranspilerOptions, Transpiler } from 'stryker-api/transpile';
 import { File } from 'stryker-api/core';
 import TranspilerFacade from '../transpiler/TranspilerFacade';
 import { getLogger } from 'log4js';
@@ -44,20 +44,16 @@ export default class InitialTestExecutor {
   private async initialRunInSandbox(): Promise<InitialTestRunResult> {
     const coverageInstrumenterTranspiler = this.createCoverageInstrumenterTranspiler();
     const transpilerFacade = this.createTranspilerFacade(coverageInstrumenterTranspiler);
-    const transpileResult = await transpilerFacade.transpile(this.inputFiles.files);
-    if (transpileResult.error) {
-      throw new Error(`Could not transpile input files: ${transpileResult.error}`);
-    } else {
-      this.logTranspileResult(transpileResult);
-      const sandbox = await Sandbox.create(this.options, 0, transpileResult.outputFiles, this.testFramework);
-      const runResult = await sandbox.run(INITIAL_RUN_TIMEOUT);
-      await sandbox.dispose();
-      return {
-        runResult,
-        transpiledFiles: transpileResult.outputFiles,
-        coverageMaps: coverageInstrumenterTranspiler.fileCoverageMaps
-      };
-    }
+    const transpiledFiles = await transpilerFacade.transpile(this.inputFiles.files);
+    this.logTranspileResult(transpiledFiles);
+    const sandbox = await Sandbox.create(this.options, 0, transpiledFiles, this.testFramework);
+    const runResult = await sandbox.run(INITIAL_RUN_TIMEOUT);
+    await sandbox.dispose();
+    return {
+      runResult,
+      transpiledFiles: transpiledFiles,
+      coverageMaps: coverageInstrumenterTranspiler.fileCoverageMaps
+    };
   }
 
   private validateResult(runResult: RunResult): void {
@@ -117,9 +113,9 @@ export default class InitialTestExecutor {
     return new CoverageInstrumenterTranspiler({ produceSourceMaps: true, config: this.options }, this.testFramework, this.inputFiles.mutateFileNames);
   }
 
-  private logTranspileResult(transpileResult: TranspileResult) {
+  private logTranspileResult(transpiledFiles: ReadonlyArray<File>) {
     if (this.options.transpilers.length && this.log.isDebugEnabled()) {
-      this.log.debug(`Transpiled files: ${JSON.stringify(transpileResult.outputFiles.map(f => `${f.name}`), null, 2)}`);
+      this.log.debug(`Transpiled files: ${JSON.stringify(transpiledFiles.map(f => `${f.name}`), null, 2)}`);
     }
   }
 

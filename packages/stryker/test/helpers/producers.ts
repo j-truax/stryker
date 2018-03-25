@@ -1,6 +1,5 @@
 import { TestResult, TestStatus, RunResult, RunStatus } from 'stryker-api/test_runner';
 import { Mutant } from 'stryker-api/mutant';
-import { TranspileResult } from 'stryker-api/transpile';
 import { Config } from 'stryker-api/config';
 import * as sinon from 'sinon';
 import { TestFramework, TestSelection } from 'stryker-api/test_framework';
@@ -13,6 +12,7 @@ import { Logger } from 'log4js';
 import { FileCoverageData } from 'istanbul-lib-coverage';
 import { CoverageMaps } from '../../src/transpiler/CoverageInstrumenterTranspiler';
 import { MappedLocation } from '../../src/transpiler/SourceMapper';
+import TranspileResult from '../../src/transpiler/TranspileResult';
 
 export type Mock<T> = {
   [P in keyof T]: sinon.SinonStub;

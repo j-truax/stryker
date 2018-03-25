@@ -52,14 +52,13 @@ describe('TypescriptTranspiler', () => {
         .withArgs('bar.ts').returns(multiResult(expected[1]));
 
       // Act
-      const result = await sut.transpile([
+      const outputFiles = await sut.transpile([
         new File('foo.ts', ''),
         new File('bar.ts', '')
       ]);
 
       // Assert
-      expect(result.error).eq(null);
-      expectFilesEqual(result.outputFiles, expected);
+      expectFilesEqual(outputFiles, expected);
     });
 
     it('should keep file order', async () => {
@@ -75,11 +74,10 @@ describe('TypescriptTranspiler', () => {
         .withArgs('file4.ts').returns(multiResult(new File('file4.js', 'file4')));
 
       // Act
-      const result = await sut.transpile(input);
+      const outputFiles = await sut.transpile(input);
 
       // Assert
-      expect(result.error).eq(null);
-      expectFilesEqual(result.outputFiles, [
+      expectFilesEqual(outputFiles, [
         input[0],
         new File('file2.js', 'file2'),
         new File('file4.js', 'file4')
@@ -96,11 +94,10 @@ describe('TypescriptTranspiler', () => {
       languageService.emit.returns(multiResult(new File('file1.js', '')));
 
       // Act
-      const result = await sut.transpile(input);
+      const outputFiles = await sut.transpile(input);
 
       // Assert
-      expect(result.error).eq(null);
-      expectFilesEqual(result.outputFiles, [new File('file1.js', ''), input[1]]);
+      expectFilesEqual(outputFiles, [new File('file1.js', ''), input[1]]);
       expect(languageService.emit).calledOnce;
       expect(languageService.emit).calledWith('file1.ts');
     });
@@ -123,11 +120,10 @@ describe('TypescriptTranspiler', () => {
       arrangeIncludedFiles([input[1], input[3]]);
 
       // Act
-      const output = await sut.transpile(input);
+      const outputFiles = await sut.transpile(input);
 
       // Assert
-      expect(output.error).eq(null);
-      expectFilesEqual(output.outputFiles, [
+      expectFilesEqual(outputFiles, [
         new File('file1.ts', 'file1'),
         allOutput,
         new File('file3.bin', Buffer.from([1, 2, 3])),
@@ -137,13 +133,11 @@ describe('TypescriptTranspiler', () => {
       expect(languageService.emit).calledWith('file2.ts');
     });
 
-    it('should return errors when there are diagnostic messages', async () => {
+    it('should reject errors when there are diagnostic messages', async () => {
       languageService.getSemanticDiagnostics.returns('foobar');
       arrangeIncludedFiles();
       const input = [new File('file1.ts', 'file1'), new File('file2.ts', 'file2')];
-      const result = await sut.transpile(input);
-      expect(result.error).eq('foobar');
-      expect(result.outputFiles).lengthOf(0);
+      return expect(sut.transpile(input)).rejectedWith('foobar');
     });
   });
 

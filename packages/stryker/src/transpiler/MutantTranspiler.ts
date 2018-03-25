@@ -5,8 +5,10 @@ import TestableMutant from '../TestableMutant';
 import { File } from 'stryker-api/core';
 import SourceFile from '../SourceFile';
 import ChildProcessProxy, { ChildProxy } from '../child-proxy/ChildProcessProxy';
-import { TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
+import { TranspilerOptions } from 'stryker-api/transpile';
 import TranspiledMutant from '../TranspiledMutant';
+import TranspileResult from './TranspileResult';
+import { errorToString } from '../utils/objectUtils';
 
 export default class MutantTranspiler {
 
@@ -36,10 +38,10 @@ export default class MutantTranspiler {
     }
   }
 
-  initialize(files: ReadonlyArray<File>): Promise<TranspileResult> {
-    return this.proxy.transpile(files).then((transpileResult: TranspileResult) => {
-      this.unMutatedFiles = transpileResult.outputFiles;
-      return transpileResult;
+  initialize(files: ReadonlyArray<File>): Promise<ReadonlyArray<File>> {
+    return this.proxy.transpile(files).then((transpiledFiles: ReadonlyArray<File>) => {
+      this.unMutatedFiles = transpiledFiles;
+      return transpiledFiles;
     });
   }
 
@@ -50,7 +52,7 @@ export default class MutantTranspiler {
         const mutant = mutants.shift();
         if (mutant) {
           this.transpileMutant(mutant)
-            .then(transpileResult => observer.next(TranspiledMutant.create(mutant, transpileResult, this.unMutatedFiles)))
+            .then(transpiledFiles => observer.next(this.createTranspiledMutant(mutant, transpiledFiles, this.unMutatedFiles)))
             .then(nextMutant)
             .catch(error => observer.error(error));
         } else {
@@ -67,6 +69,23 @@ export default class MutantTranspiler {
     }
   }
 
+  private createTranspiledMutant(mutant: TestableMutant, transpileResult: TranspileResult, unMutatedFiles: ReadonlyArray<File>) {
+    return new TranspiledMutant(mutant, transpileResult, someFilesChanged());
+
+    function someFilesChanged(): boolean {
+      return transpileResult.outputFiles.some(file => fileChanged(file));
+    }
+
+    function fileChanged(file: File) {
+      if (unMutatedFiles) {
+        const unMutatedFile = unMutatedFiles.find(f => f.name === file.name);
+        return !unMutatedFile || unMutatedFile.textContent !== file.textContent;
+      } else {
+        return true;
+      }
+    }
+  }
+
   private transpileMutant(mutant: TestableMutant): Promise<TranspileResult> {
     const filesToTranspile: File[] = [];
     if (this.currentMutatedFile && this.currentMutatedFile.name !== mutant.fileName) {
@@ -75,6 +94,8 @@ export default class MutantTranspiler {
     this.currentMutatedFile = mutant.sourceFile;
     const mutatedFile = new File(mutant.fileName, Buffer.from(mutant.mutatedCode));
     filesToTranspile.push(mutatedFile);
-    return this.proxy.transpile(filesToTranspile);
+    return this.proxy.transpile(filesToTranspile)
+      .then((transpiledFiles: ReadonlyArray<File>) => ({ outputFiles: transpiledFiles, error: null }))
+      .catch(error => ({ outputFiles: [], error: errorToString(error) }));
   }
 }

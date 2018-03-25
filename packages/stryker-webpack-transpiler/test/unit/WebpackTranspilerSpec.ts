@@ -77,21 +77,14 @@ describe('WebpackTranspiler', () => {
 
   it('should return a successResult with the bundled files on success', async () => {
     webpackTranspiler = new WebpackTranspiler({ config, produceSourceMaps: false });
-    const transpileResult = await webpackTranspiler.transpile([]);
-
-    expect(transpileResult.error).to.be.null;
-    expect(transpileResult.outputFiles).to.deep.equal([exampleBundleFile]);
+    const transpiledFiles = await webpackTranspiler.transpile([]);
+    expect(transpiledFiles).to.deep.equal([exampleBundleFile]);
   });
 
   it('should return a error result when an error occurred', async () => {
     webpackTranspiler = new WebpackTranspiler({ config, produceSourceMaps: false });
-    const fakeError = 'compiler could not compile input files';
-    webpackCompilerStub.emit.throwsException(Error(fakeError));
-
-    const transpileResult = await webpackTranspiler.transpile([]);
-
-    expect(transpileResult.outputFiles).to.be.an('array').that.is.empty;
-    expect(transpileResult.error).to.equal(`Error: ${fakeError}`);
+    const fakeError = new Error('compiler could not compile input files');
+    webpackCompilerStub.emit.throwsException(fakeError);
+    expect(webpackTranspiler.transpile([])).rejectedWith(fakeError);
   });
-
 });

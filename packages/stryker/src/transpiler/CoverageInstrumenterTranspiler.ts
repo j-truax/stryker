@@ -1,4 +1,4 @@
-import { Transpiler, TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
+import { Transpiler, TranspilerOptions } from 'stryker-api/transpile';
 import { createInstrumenter, Instrumenter } from 'istanbul-lib-instrument';
 import { errorToString, wrapInClosure } from '../utils/objectUtils';
 import { TestFramework } from 'stryker-api/test_framework';
@@ -28,16 +28,9 @@ export default class CoverageInstrumenterTranspiler implements Transpiler {
     this.log = getLogger(CoverageInstrumenterTranspiler.name);
   }
 
-  public transpile(files: ReadonlyArray<File>): Promise<TranspileResult> {
-    try {
-      const result: TranspileResult = {
-        outputFiles: files.map(file => this.instrumentFileIfNeeded(file)),
-        error: null
-      };
-      return Promise.resolve(this.addCollectCoverageFileIfNeeded(result));
-    } catch (error) {
-      return Promise.resolve(this.errorResult(errorToString(error)));
-    }
+  public async transpile(files: ReadonlyArray<File>): Promise<ReadonlyArray<File>> {
+    const transpiledFiles = files.map(file => this.instrumentFileIfNeeded(file));
+    return this.addCollectCoverageFileIfNeeded(transpiledFiles);
   }
 
   /**
@@ -107,21 +100,21 @@ export default class CoverageInstrumenterTranspiler implements Transpiler {
     return output;
   }
 
-  private addCollectCoverageFileIfNeeded(result: TranspileResult): TranspileResult {
+  private addCollectCoverageFileIfNeeded(transpiledFiles: ReadonlyArray<File>): ReadonlyArray<File> {
     if (Object.keys(this.fileCoverageMaps).length && this.settings.config.coverageAnalysis === 'perTest') {
       if (this.testFramework) {
         // Add piece of javascript to collect coverage per test results
         const content = this.coveragePerTestFileContent(this.testFramework);
         const fileName = '____collectCoveragePerTest____.js';
-        const newOutputFiles = result.outputFiles.slice();
+        const newOutputFiles = transpiledFiles.slice();
         newOutputFiles.unshift(new File(fileName, content));
-        result.outputFiles = newOutputFiles;
         this.log.debug(`Adding test hooks file for coverageAnalysis "perTest": ${fileName}`);
+        return newOutputFiles;
       } else {
-        return this.errorResult('Cannot measure coverage results per test, there is no testFramework and thus no way of executing code right before and after each test.');
+        throw new Error('Cannot measure coverage results per test, there is no testFramework and thus no way of executing code right before and after each test.');
       }
     }
-    return result;
+    return transpiledFiles;
   }
 
   private coveragePerTestFileContent(testFramework: TestFramework): string {
@@ -132,13 +125,6 @@ export default class CoverageInstrumenterTranspiler implements Transpiler {
           ${testFramework.afterEach(afterEachFragmentPerTest)}
           ${cloneFunctionFragment};
       `);
-  }
-
-  private errorResult(error: string) {
-    return {
-      error,
-      outputFiles: []
-    };
   }
 }
 

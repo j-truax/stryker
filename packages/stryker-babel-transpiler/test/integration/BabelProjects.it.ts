@@ -23,10 +23,9 @@ function describeIntegrationTest(projectName: string) {
   });
 
   it('should be able to transpile the input files', async () => {
-    const result = await babelTranspiler.transpile(projectFiles);
+    const actualResultFiles = await babelTranspiler.transpile(projectFiles);
     const expectedResultFiles = resultFiles.map(file => new File(file.name.replace('expectedResult', 'source'), file.content));
-    expect(result.error).null;
-    expectFilesEqual(result.outputFiles, expectedResultFiles);
+    expectFilesEqual(actualResultFiles, expectedResultFiles);
   });
 
   it('should have project files', () => {

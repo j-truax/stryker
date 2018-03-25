@@ -24,4 +24,8 @@ export default class Echo {
   readFile() {
     return new File('foobar.txt', 'hello foobar');
   }
+
+  reject(error: string) {
+    return Promise.reject(new Error(error));
+  }
 }

@@ -16,9 +16,8 @@ describe('CoverageInstrumenterTranspiler', () => {
     sut = new CoverageInstrumenterTranspiler({ config, produceSourceMaps: false }, null, ['foobar.js']);
     config.coverageAnalysis = 'off';
     const input = [new File('foobar.js', '')];
-    const output = await sut.transpile(input);
-    expect(output.error).null;
-    expect(output.outputFiles).deep.eq(input);
+    const outputFiles = await sut.transpile(input);
+    expect(outputFiles).deep.eq(input);
   });
 
   describe('when coverage analysis is "all"', () => {
@@ -33,9 +32,8 @@ describe('CoverageInstrumenterTranspiler', () => {
         new File('mutate.js', 'function something() {}'),
         new File('spec.js', '')
       ];
-      const output = await sut.transpile(input);
-      expect(output.error).null;
-      const instrumentedContent = output.outputFiles[0].textContent;
+      const outputFiles = await sut.transpile(input);
+      const instrumentedContent = outputFiles[0].textContent;
       expect(instrumentedContent).to.contain('function something(){cov_').and.contain('.f[0]++');
     });
 
@@ -43,9 +41,8 @@ describe('CoverageInstrumenterTranspiler', () => {
       const input = [
         new File('mutate.js', 'function something() {} // # sourceMappingUrl="something.map.js"'),
       ];
-      const output = await sut.transpile(input);
-      expect(output.error).null;
-      const instrumentedContent = output.outputFiles[0].textContent;
+      const outputFiles = await sut.transpile(input);
+      const instrumentedContent = outputFiles[0].textContent;
       expect(instrumentedContent).to.contain('sourceMappingUrl="something.map.js"');
     });
 
@@ -63,8 +60,7 @@ describe('CoverageInstrumenterTranspiler', () => {
 
     it('should fill error message and not transpile input when the file contains a parse error', async () => {
       const invalidJavascriptFile = new File('mutate.js', 'function something {}');
-      const output = await sut.transpile([invalidJavascriptFile]);
-      expect(output.error).contains('Could not instrument "mutate.js" for code coverage. SyntaxError: Unexpected token');
+      return expect(sut.transpile([invalidJavascriptFile])).rejectedWith('Could not instrument "mutate.js" for code coverage. SyntaxError: Unexpected token');
     });
   });
 
@@ -78,27 +74,24 @@ describe('CoverageInstrumenterTranspiler', () => {
     });
 
     it('should use the coverage variable "__strykerCoverageCurrentTest__"', async () => {
-      const output = await sut.transpile(input);
-      expect(output.error).null;
-      const instrumentedContent = output.outputFiles[1].textContent;
+      const outputFiles = await sut.transpile(input);
+      const instrumentedContent = outputFiles[1].textContent;
       expect(instrumentedContent).to.contain('__strykerCoverageCurrentTest__').and.contain('.f[0]++');
     });
 
     it('should also add a collectCoveragePerTest file', async () => {
-      const output = await sut.transpile(input);
-      expect(output.error).null;
-      expect(output.outputFiles).lengthOf(2);
-      const actualContent = output.outputFiles[0].textContent;
+      const outputFiles = await sut.transpile(input);
+      expect(outputFiles).lengthOf(2);
+      const actualContent = outputFiles[0].textContent;
       expect(actualContent).to.have.length.greaterThan(30);
       expect(actualContent).to.contain('beforeEach()');
       expect(actualContent).to.contain('afterEach()');
     });
   });
 
-  it('should result in an error if coverage analysis is "perTest" and there is no testFramework', async () => {
+  it('should result in an error if coverage analysis is "perTest" and there is no testFramework', () => {
     config.coverageAnalysis = 'perTest';
     sut = new CoverageInstrumenterTranspiler({ config, produceSourceMaps: true }, null, ['mutate.js']);
-    const output = await sut.transpile([new File('mutate.js', 'a + b')]);
-    expect(output.error).eq('Cannot measure coverage results per test, there is no testFramework and thus no way of executing code right before and after each test.');
+    return expect(sut.transpile([new File('mutate.js', 'a + b')])).rejectedWith('Cannot measure coverage results per test, there is no testFramework and thus no way of executing code right before and after each test.');
   });
 });

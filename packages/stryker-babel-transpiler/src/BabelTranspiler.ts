@@ -1,8 +1,7 @@
-import { Transpiler, TranspilerOptions, TranspileResult } from 'stryker-api/transpile';
+import { Transpiler, TranspilerOptions } from 'stryker-api/transpile';
 import { File } from 'stryker-api/core';
 import * as babel from 'babel-core';
 import * as path from 'path';
-import { EOL } from 'os';
 import BabelConfigReader from './BabelConfigReader';
 import { CONFIG_KEY_FILE } from './helpers/keys';
 import { toJSFileName } from './helpers/helpers';
@@ -30,22 +29,17 @@ class BabelTranspiler implements Transpiler {
     }
   }
 
-  public transpile(files: File[]): Promise<TranspileResult> {
-    const errors: string[] = [];
-    const transpiledFiles = files.map(file => {
-      try {
-        return this.transpileFileIfNeeded(file);
-      } catch (error) {
-        errors.push(`Error while transpiling "${file.name}": ${error.stack || error.message}`);
-        return file;
-      }
-    });
-    return Promise.resolve(this.createResult(transpiledFiles, errors));
+  public transpile(files: ReadonlyArray<File>): Promise<ReadonlyArray<File>> {
+    return new Promise<ReadonlyArray<File>>(res => res(files.map(file => this.transpileFileIfNeeded(file))));
   }
 
   private transpileFileIfNeeded(file: File): File {
     if (KNOWN_EXTENSIONS.some(ext => ext === path.extname(file.name))) {
-      return this.transpileFile(file);
+      try {
+        return this.transpileFile(file);
+      } catch (error) {
+        throw new Error(`Error while transpiling "${file.name}": ${error.stack || error.message}`);
+      }
     } else {
       return file; // pass through
     }
@@ -76,27 +70,6 @@ class BabelTranspiler implements Transpiler {
     } else {
       return process.cwd();
     }
-  }
-
-  private createResult(results: File[], errorResults: string[]): TranspileResult {
-    if (errorResults.length > 0) {
-      return this.createErrorResult(errorResults.join(EOL));
-    }
-    return this.createSuccessResult(results);
-  }
-
-  private createErrorResult(error: string): TranspileResult {
-    return {
-      error,
-      outputFiles: []
-    };
-  }
-
-  private createSuccessResult(outputFiles: File[]): TranspileResult {
-    return {
-      error: null,
-      outputFiles
-    };
   }
 }
 

@@ -23,7 +23,7 @@ export default class TranspilingLanguageService {
   private logger = getLogger(TranspilingLanguageService.name);
   private readonly diagnosticsFormatter: ts.FormatDiagnosticsHost;
 
-  constructor(compilerOptions: Readonly<ts.CompilerOptions>, rootFiles: File[], private projectDirectory: string, private produceSourceMaps: boolean) {
+  constructor(compilerOptions: Readonly<ts.CompilerOptions>, rootFiles: ReadonlyArray<File>, private projectDirectory: string, private produceSourceMaps: boolean) {
     this.compilerOptions = this.adaptCompilerOptions(compilerOptions);
     rootFiles.forEach(file => this.files[file.name] = new ScriptFile(file.name, file.textContent));
     const host = this.createLanguageServiceHost();
@@ -52,12 +52,12 @@ export default class TranspilingLanguageService {
    * Replaces the content of the given text files
    * @param mutantCandidate The mutant used to replace the original source
    */
-  replace(replacements: File[]) {
+  replace(replacements: ReadonlyArray<File>) {
     replacements.forEach(replacement =>
       this.files[replacement.name].replace(replacement.textContent));
   }
 
-  getSemanticDiagnostics(files: File[]) {
+  getSemanticDiagnostics(files: ReadonlyArray<File>) {
     const fileNames = files.map(file => file.name);
     const errors = flatMap(fileNames, fileName => this.languageService.getSemanticDiagnostics(normalizeFileForTypescript(fileName)));
     return ts.formatDiagnostics(errors, this.diagnosticsFormatter);

@@ -18,8 +18,8 @@ export default class MutationTestExecutor {
 
   async run(allMutants: TestableMutant[]): Promise<MutantResult[]> {
     const mutantTranspiler = new MutantTranspiler(this.config);
-    const transpileResult = await mutantTranspiler.initialize(this.inputFiles);
-    const sandboxPool = new SandboxPool(this.config, this.testFramework, transpileResult.outputFiles);
+    const transpiledFiles = await mutantTranspiler.initialize(this.inputFiles);
+    const sandboxPool = new SandboxPool(this.config, this.testFramework, transpiledFiles);
     const result = await this.runInsideSandboxes(
       sandboxPool.streamSandboxes(),
       mutantTranspiler.transpileMutants(allMutants));

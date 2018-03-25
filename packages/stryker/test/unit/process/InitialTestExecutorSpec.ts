@@ -9,7 +9,7 @@ import * as producers from '../../helpers/producers';
 import { TestFramework } from 'stryker-api/test_framework';
 import CoverageInstrumenterTranspiler, * as coverageInstrumenterTranspiler from '../../../src/transpiler/CoverageInstrumenterTranspiler';
 import TranspilerFacade, * as transpilerFacade from '../../../src/transpiler/TranspilerFacade';
-import { TranspileResult, TranspilerOptions } from 'stryker-api/transpile';
+import { TranspilerOptions } from 'stryker-api/transpile';
 import { RunStatus, RunResult, TestStatus } from 'stryker-api/test_runner';
 import currentLogMock from '../../helpers/log4jsMock';
 import Timer from '../../../src/utils/Timer';
@@ -25,7 +25,7 @@ describe('InitialTestExecutor run', () => {
   let coverageInstrumenterTranspilerMock: producers.Mock<CoverageInstrumenterTranspiler>;
   let options: Config;
   let transpilerFacadeMock: producers.Mock<TranspilerFacade>;
-  let transpileResultMock: TranspileResult;
+  let transpiledFiles: File[];
   let timer: producers.Mock<Timer>;
   let expectedRunResult: RunResult;
 
@@ -38,13 +38,11 @@ describe('InitialTestExecutor run', () => {
     sandbox.stub(transpilerFacade, 'default').returns(transpilerFacadeMock);
     sandbox.stub(coverageInstrumenterTranspiler, 'default').returns(coverageInstrumenterTranspilerMock);
     testFrameworkMock = producers.testFramework();
-    transpileResultMock = producers.transpileResult({
-      outputFiles: [
-        new File('transpiled-file-1.js', ''),
-        new File('transpiled-file-2.js', '')
-      ]
-    });
-    transpilerFacadeMock.transpile.returns(transpileResultMock);
+    transpiledFiles = [
+      new File('transpiled-file-1.js', ''),
+      new File('transpiled-file-2.js', '')
+    ];
+    transpilerFacadeMock.transpile.returns(transpiledFiles);
     options = producers.config();
     expectedRunResult = producers.runResult();
     strykerSandboxMock.run.resolves(expectedRunResult);
@@ -71,7 +69,7 @@ describe('InitialTestExecutor run', () => {
 
     it('should create a sandbox with correct arguments', async () => {
       await sut.run();
-      expect(StrykerSandbox.create).calledWith(options, 0, transpileResultMock.outputFiles, testFrameworkMock);
+      expect(StrykerSandbox.create).calledWith(options, 0, transpiledFiles, testFrameworkMock);
     });
 
     it('should create the transpiler with produceSourceMaps = true when coverage analysis is enabled', async () => {
@@ -106,7 +104,7 @@ describe('InitialTestExecutor run', () => {
       coverageInstrumenterTranspilerMock.fileCoverageMaps = { someFile: coverageData } as any;
       const expectedResult: InitialTestRunResult = {
         runResult: expectedRunResult,
-        transpiledFiles: transpileResultMock.outputFiles,
+        transpiledFiles: transpiledFiles,
         coverageMaps: {
           someFile: coverageData
         }

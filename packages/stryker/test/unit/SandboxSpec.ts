@@ -12,7 +12,7 @@ import { TempFolder } from '../../src/utils/TempFolder';
 import ResilientTestRunnerFactory from '../../src/isolated-runner/ResilientTestRunnerFactory';
 import IsolatedRunnerOptions from '../../src/isolated-runner/IsolatedRunnerOptions';
 import TestableMutant, { TestSelectionResult } from '../../src/TestableMutant';
-import { mutant as createMutant, testResult, transpileResult, Mock } from '../helpers/producers';
+import { mutant as createMutant, testResult, Mock } from '../helpers/producers';
 import SourceFile from '../../src/SourceFile';
 import '../helpers/globals';
 import TranspiledMutant from '../../src/TranspiledMutant';
@@ -104,10 +104,7 @@ describe('Sandbox', () => {
           new SourceFile(new File('foobar.js', 'original code')));
         testableMutant.selectTest(testResult({ timeSpentMs: 10 }), 1);
         testableMutant.selectTest(testResult({ timeSpentMs: 2 }), 2);
-        transpiledMutant = new TranspiledMutant(testableMutant, {
-          error: null,
-          outputFiles: [new File(expectedFileToMutate.name, 'mutated code')]
-        }, true);
+        transpiledMutant = new TranspiledMutant(testableMutant, { outputFiles: [new File(expectedFileToMutate.name, 'mutated code')], error: null }, true);
         testFrameworkStub.filter.returns(testFilterCodeFragment);
       });
 
@@ -174,7 +171,7 @@ describe('Sandbox', () => {
 
       beforeEach(() => {
         const mutant = new TestableMutant('2', createMutant(), new SourceFile(new File('', '')));
-        return sut.runMutant(new TranspiledMutant(mutant, transpileResult({ outputFiles: [new File(expectedTargetFileToMutate, '')] }), true));
+        return sut.runMutant(new TranspiledMutant(mutant, { outputFiles: [new File(expectedTargetFileToMutate, '')], error: null }, true));
       });
 
       it('should not filter any tests', () => {
